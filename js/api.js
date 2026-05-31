@@ -4,6 +4,8 @@
 // ══════════════════════════════════════════════════
 const Api = (() => {
   const tmdbCache = new Map();
+  let tmdbBackoffUntil = 0;
+  let tmdbFailStreak = 0;
 
   function unwrapApiData(payload) {
     if (!payload || typeof payload !== 'object') return payload;
@@ -25,21 +27,16 @@ const Api = (() => {
       .trim();
   }
 
-  function tmdbHeaders() {
-    return {
-      Authorization: `Bearer ${TMDB_READ_ACCESS_TOKEN}`,
-      Accept: 'application/json',
-    };
-  }
-
   async function fetchTmdbCandidates(query, mediaType = 'multi', year = '') {
     const q = cleanTmdbQuery(query);
     if (!q) return [];
+    if (Date.now() < tmdbBackoffUntil) return [];
 
     const cacheKey = `${mediaType}|${q}|${year || ''}`;
     if (tmdbCache.has(cacheKey)) return tmdbCache.get(cacheKey);
 
     const params = new URLSearchParams({
+      api_key: TMDB_API_KEY,
       query: q,
       include_adult: 'false',
       language: 'es-ES',
@@ -59,12 +56,26 @@ const Api = (() => {
     for (const type of tries) {
       try {
         const url = `${TMDB_API_BASE}/search/${type}?${params.toString()}`;
-        const r = await fetchTimeout(url, { headers: tmdbHeaders() }, 8000);
-        if (!r.ok) continue;
+        const r = await fetchTimeout(url, {}, 8000);
+        if (!r.ok) {
+          if (r.status === 429) {
+            tmdbFailStreak += 1;
+            tmdbBackoffUntil = Date.now() + 10 * 60 * 1000;
+            break;
+          }
+          continue;
+        }
         const d = await r.json();
         results = Array.isArray(d?.results) ? d.results : [];
+        tmdbFailStreak = 0;
         if (results.length) break;
-      } catch (_) {}
+      } catch (_) {
+        tmdbFailStreak += 1;
+        if (tmdbFailStreak >= 3) {
+          tmdbBackoffUntil = Date.now() + 10 * 60 * 1000;
+          break;
+        }
+      }
     }
 
     tmdbCache.set(cacheKey, results);
@@ -120,30 +131,54 @@ const Api = (() => {
   }
 
   async function proxiedFetch(url) {
-    // 1) Direct (allcalidad.re has CORS open)
-    try {
-      const r = await fetchTimeout(url, { mode: 'cors' }, 6000);
-      if (r.ok) return r;
-    } catch (_) {}
-    // 2) allorigins
-    try {
-      const r = await fetchTimeout(
-        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, {}, 8000);
-      if (r.ok) {
-        const d = await r.json();
-        if (d?.contents) {
+    let host = '';
+    try { host = new URL(url, window.location.href).host.toLowerCase(); } catch (_) {}
+
+    const isAllcalidadApi = /(^|\.)allcalidad\.re$/.test(host);
+
+    if (isAllcalidadApi) {
+      try {
+        const r = await fetchTimeout(url, { mode: 'cors' }, 6000);
+        if (r.ok) return r;
+      } catch (_) {}
+    }
+
+    // Most reliable proxies first for external embeds to reduce noisy expected CORS errors.
+    const attempts = [
+      { kind: 'raw', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
+      { kind: 'raw', url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}` },
+      { kind: 'allorigins', url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}` },
+      { kind: 'raw', url: `https://thingproxy.freeboard.io/fetch/${url}` },
+    ];
+
+    for (const at of attempts) {
+      try {
+        const r = await fetchTimeout(at.url, {}, 8000);
+        if (!r.ok) continue;
+
+        if (at.kind === 'allorigins') {
+          const d = await r.json();
+          if (!d?.contents) continue;
           const text = d.contents;
-          return { ok:true, status:200,
+          return {
+            ok: true,
+            status: 200,
             text: () => Promise.resolve(text),
-            json: () => Promise.resolve(JSON.parse(text)) };
+            json: () => Promise.resolve(JSON.parse(text)),
+          };
         }
-      }
-    } catch (_) {}
-    // 3) thingproxy
+
+        return r;
+      } catch (_) {}
+    }
+
+    // Last fallback for plain-text mirrors.
     try {
-      const r = await fetchTimeout(`https://thingproxy.freeboard.io/fetch/${url}`, {}, 8000);
+      const normalized = url.replace(/^https?:\/\//i, '');
+      const r = await fetchTimeout(`https://r.jina.ai/http://${normalized}`, {}, 10000);
       if (r.ok) return r;
     } catch (_) {}
+
     throw new Error('All proxies failed: ' + url);
   }
 

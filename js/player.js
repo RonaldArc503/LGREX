@@ -176,6 +176,8 @@ const Player = (() => {
     if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
     vid().src = '';
     vid().autoplay = true;
+    vid().muted = true;
+    vid().defaultMuted = true;
     vid().onloadedmetadata = null;
     ifr().src = '';
     ifr().style.display = 'none';
@@ -216,6 +218,7 @@ const Player = (() => {
 
   async function _resolveAndPlay(item) {
     let embedUrl = item.embedUrl || '';
+    let servers = [];
 
     // Step 1: get player data from API
     if (!embedUrl && item.postId) {
@@ -227,23 +230,45 @@ const Player = (() => {
       _log('Embed encontrado: ' + (embedUrl ? embedUrl.slice(0, 60) + '...' : 'NINGUNO'), embedUrl ? '#46d369' : '#f55');
 
       // Build server switcher buttons
-      const servers = Api.extractPlayerSources(data);
+      servers = Api.extractPlayerSources(data);
       _buildServerButtons(servers, (url) => _tryEmbed(url));
     }
 
-    if (!embedUrl) { _noStream('No se encontró URL de embed'); return; }
+    const candidateUrls = [];
+    if (embedUrl) candidateUrls.push(embedUrl);
 
-    await _tryEmbed(embedUrl);
+    servers.forEach(s => {
+      const url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || '';
+      if (url && !candidateUrls.includes(url)) candidateUrls.push(url);
+    });
+
+    if (!candidateUrls.length) {
+      _noStream('No se encontró URL de embed');
+      return;
+    }
+
+    for (let i = 0; i < candidateUrls.length; i++) {
+      const url = candidateUrls[i];
+      const tryingMsg = candidateUrls.length > 1
+        ? `Probando servidor ${i + 1}/${candidateUrls.length}...`
+        : 'Probando servidor...';
+      _log(tryingMsg, '#f5c518');
+
+      const ok = await _tryEmbed(url, false);
+      if (ok) return;
+    }
+
+    _noStream('Ningún servidor compatible con reproducción directa.');
   }
 
-  async function _tryEmbed(embedUrl) {
+  async function _tryEmbed(embedUrl, showErrorOnFail = true) {
     _log('Extrayendo stream de: ' + embedUrl.slice(0, 60) + '...');
     if (/\.m3u8(?:\?|#|$)/i.test(embedUrl)) {
       _log('Stream HLS directo encontrado ✓', '#46d369');
       ifr().style.display = 'none';
       vid().style.display = 'block';
       _loadStream(embedUrl, false);
-      return;
+      return true;
     }
     const m3u8 = await Api.extractM3u8(embedUrl);
 
@@ -252,14 +277,39 @@ const Player = (() => {
       ifr().style.display = 'none';
       vid().style.display = 'block';
       _loadStream(m3u8, false);
+      return true;
     } else {
-      // Fallback: iframe (vimeos.net serves its own player)
-      _log('Usando iframe embed (el player externo se cargará)', '#f5c518');
-      ifr().src           = embedUrl;
+      if (!ALLOW_IFRAME_FALLBACK) {
+        _log('Servidor no compatible: no se pudo extraer stream directo', '#f55');
+        if (showErrorOnFail) {
+          _noStream('Este servidor usa iframe externo bloqueado por CORS/ads. Prueba otro servidor.');
+        }
+        return false;
+      }
+
+      // Optional fallback: external iframe (autoplay cannot be guaranteed)
+      _log('Usando iframe externo con autoplay forzado', '#f5c518');
+      ifr().src           = _withAutoplayParams(embedUrl);
       ifr().style.display = 'block';
       vid().style.display = 'none';
       // Keep loading overlay briefly, then hide
       setTimeout(() => $('p-loading').classList.add('hidden'), 3000);
+      return true;
+    }
+  }
+
+  function _withAutoplayParams(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url, window.location.href);
+      u.searchParams.set('autoplay', '1');
+      u.searchParams.set('mute', '1');
+      u.searchParams.set('muted', '1');
+      u.searchParams.set('playsinline', '1');
+      return u.toString();
+    } catch (_) {
+      const sep = url.includes('?') ? '&' : '?';
+      return `${url}${sep}autoplay=1&mute=1&muted=1&playsinline=1`;
     }
   }
 
@@ -282,6 +332,43 @@ const Player = (() => {
     });
   }
 
+  function _playWithAutoplayFallback(v, context = '') {
+    if (!v) return Promise.resolve();
+
+    v.autoplay = true;
+    v.muted = true;
+    v.defaultMuted = true;
+
+    const startPlayback = () => v.play().catch(err => {
+      console.warn('[Player] autoplay blocked', context, err);
+      return new Promise((resolve, reject) => {
+        const retry = () => {
+          v.removeEventListener('canplay', retry);
+          v.removeEventListener('loadedmetadata', retry);
+          v.play().then(() => {
+            _log('Reproducción automática activada', '#46d369');
+            resolve();
+          }).catch(err2 => {
+            console.warn('[Player] autoplay retry failed', context, err2);
+            reject(err2);
+          });
+        };
+
+        if (v.readyState >= 2) {
+          retry();
+        } else {
+          v.addEventListener('canplay', retry, { once: true });
+          v.addEventListener('loadedmetadata', retry, { once: true });
+        }
+      }).catch(err2 => {
+        console.warn('[Player] muted autoplay fallback failed', context, err2);
+        throw err2;
+      });
+    });
+
+    return startPlayback();
+  }
+
   function _loadStream(url, isLive) {
     const v = vid();
     $('p-loading').classList.remove('hidden');
@@ -302,7 +389,9 @@ const Player = (() => {
       hlsInstance.attachMedia(v);
       hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
         _preferSpanishAudioHls();
-        v.play().catch(() => {});
+        v.muted = true;
+        v.defaultMuted = true;
+        _playWithAutoplayFallback(v, 'hls-manifest');
         $('p-loading').classList.add('hidden');
         $('p-play-btn').textContent = '⏸';
       });
@@ -315,14 +404,18 @@ const Player = (() => {
       v.onloadedmetadata = () => {
         _preferSpanishAudioNative();
       };
-      v.play().catch(() => {});
+      v.muted = true;
+      v.defaultMuted = true;
+      _playWithAutoplayFallback(v, 'native-hls');
       $('p-loading').classList.add('hidden');
     } else {
       v.src = url;
       v.onloadedmetadata = () => {
         _preferSpanishAudioNative();
       };
-      v.play().catch(() => {});
+      v.muted = true;
+      v.defaultMuted = true;
+      _playWithAutoplayFallback(v, 'direct-file');
       v.oncanplay = () => $('p-loading').classList.add('hidden');
     }
 

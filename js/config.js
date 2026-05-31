@@ -12,6 +12,7 @@ const TMDB_API_KEY = '07a2f9f121ce6f9371fd05194a0fb7e3';
 const TMDB_READ_ACCESS_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwN2EyZjlmMTIxY2U2ZjkzNzFmZDA1MTk0YTBmYjdlMyIsIm5iZiI6MTczMzM3MTk0OS41Mzc5OTk5LCJzdWIiOiI2NzUxMjgyZDkwM2YzMGU3M2I0MzNjN2YiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.XJ5KKACIjWUnEH6k-r5FMupxxADBY0NuQp72r1MCqzA';
 
 const AUTOPLAY_DELAY = 10; // seconds before auto-playing next episode
+const ALLOW_IFRAME_FALLBACK = false; // true only if you want to allow external embeds (less reliable autoplay)
 
 // ── Genre map (filled dynamically by /taxonomies) ─────────────────────────
 const GENRE_MAP = {};

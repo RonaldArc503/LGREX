@@ -18,7 +18,7 @@ const Sections = (() => {
     const r3 = _addSpinner(c, '🎌 Anime destacado');
     const r4 = _addSpinner(c, '📡 Canales en vivo');
 
-    Api.fetchTaxonomies(); // background, no await
+    // Endpoint taxonomies is unstable/404 in current API; static maps remain as fallback.
 
     const [topM, topS, topA, rawM, rawS, rawA] = await Promise.all([
       Api.fetchTops('movies',  'month', 24),
