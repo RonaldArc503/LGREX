@@ -48,6 +48,7 @@
   transition:background .2s;
 }
 .d-close:hover { background:rgba(255,255,255,.2); }
+.d-close:focus-visible { background:rgba(255,255,255,.2); }
 
 .d-body { padding:0 30px 30px; }
 
@@ -101,6 +102,8 @@
 .d-play-btn:hover      { background:#ddd; }
 .d-play-btn.live       { background:var(--accent); color:#fff; }
 .d-play-btn.live:hover { background:#ff2030; }
+.d-play-btn:focus-visible      { background:#ddd; }
+.d-play-btn.live:focus-visible { background:#ff2030; }
 
 .d-circle {
   width:42px; height:42px;
@@ -114,6 +117,7 @@
   transition:all .2s;
 }
 .d-circle:hover { border-color:#fff; background:rgba(255,255,255,.18); }
+.d-circle:focus-visible { border-color:#fff; background:rgba(255,255,255,.18); }
 
 .d-desc { font-size:14px; color:var(--text2); line-height:1.7; margin-bottom:14px; }
 .d-cast { font-size:12px; color:var(--text3); margin-bottom:20px; }
@@ -131,6 +135,13 @@
   gap:8px;
 }
 .d-eps-header .d-section-title { margin:0; }
+
+.d-eps-section-note {
+  margin-top:-2px;
+  margin-bottom:10px;
+  font-size:12px;
+  color:var(--text3);
+}
 
 /* Season dropdown */
 .d-season-select-wrap select {
@@ -152,9 +163,55 @@
   min-width:150px;
 }
 .d-season-select-wrap select:hover { border-color:rgba(255,255,255,.5); }
+.d-season-select-wrap select:focus-visible { border-color:#fff; }
+
+#d-season-select-wrap {
+  position:relative;
+}
+
+#d-season-select-wrap::after {
+  content:attr(title);
+  display:block;
+  margin-top:6px;
+  font-size:11px;
+  color:var(--text3);
+  line-height:1.4;
+}
 
 /* Episodes list */
 .d-episodes { display:grid; gap:2px; }
+
+.season-block {
+  margin-bottom:18px;
+  padding-bottom:14px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+.season-block:last-child {
+  margin-bottom:0;
+  padding-bottom:0;
+  border-bottom:none;
+}
+
+.season-block-head {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  margin:12px 0 10px;
+}
+
+.season-block-title {
+  font-size:20px;
+  font-weight:700;
+  color:var(--text);
+}
+
+.season-block-subtitle {
+  font-size:12px;
+  color:var(--text3);
+  margin-top:4px;
+}
 
 .ep-row {
   display:flex;
@@ -165,8 +222,10 @@
   cursor:pointer;
   transition:background .2s;
   position:relative;
+  background:rgba(255,255,255,.02);
 }
 .ep-row:hover          { background:rgba(255,255,255,.07); }
+.ep-row:focus-visible  { background:rgba(255,255,255,.11); }
 .ep-row.ep-current     { background:rgba(229,9,20,.12); border-left:3px solid var(--accent); }
 .ep-row.ep-current .ep-num { color:var(--accent); }
 
@@ -203,10 +262,13 @@
   font-size:22px;
 }
 .ep-row:hover .ep-thumb .ep-play-icon { opacity:1; }
+.ep-row:focus-visible .ep-thumb .ep-play-icon { opacity:1; }
 
 .ep-info     { flex:1; min-width:0; }
 .ep-title    { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ep-desc     { font-size:11px; color:var(--text3); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-top:2px; }
+.ep-meta-row  { margin-top:5px; display:flex; gap:8px; flex-wrap:wrap; font-size:10px; color:var(--text3); }
+.ep-meta-row span { padding:2px 6px; border-radius:999px; background:rgba(255,255,255,.06); }
 .ep-dur      { font-size:12px; color:var(--text3); margin-left:auto; flex-shrink:0; }
 
 /* Autoplay toggle */
@@ -239,3 +301,4 @@
 }
 .server-tab:hover,
 .server-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.server-tab:focus-visible { background:var(--accent); border-color:var(--accent); color:#fff; }

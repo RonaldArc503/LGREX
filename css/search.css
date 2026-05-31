@@ -27,6 +27,7 @@
   transition:background .2s;
 }
 .sv-back:hover { background:rgba(255,255,255,.15); }
+.sv-back:focus-visible { background:rgba(255,255,255,.15); }
 
 .sv-input {
   flex:1;

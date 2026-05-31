@@ -39,7 +39,16 @@
 }
 .nav-link:hover,
 .nav-link.active  { color:var(--text); }
+.nav-link:focus-visible { color:var(--text); }
 .nav-link.active::after {
+  content:'';
+  position:absolute;
+  bottom:-4px; left:0; right:0;
+  height:2px;
+  background:var(--accent);
+  border-radius:1px;
+}
+.nav-link:focus-visible::after {
   content:'';
   position:absolute;
   bottom:-4px; left:0; right:0;
@@ -87,4 +96,11 @@
   font-size:14px;
   font-weight:700;
   cursor:pointer;
+}
+
+.nav-logo:focus-visible,
+.nav-avatar:focus-visible,
+.nav-search-wrap:focus-within {
+  box-shadow:0 0 0 2px rgba(255,255,255,.85), 0 0 0 4px rgba(229,9,20,.45);
+  border-radius:6px;
 }

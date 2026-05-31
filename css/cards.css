@@ -10,6 +10,11 @@
   background:var(--bg3);
 }
 .card:hover { transform:scale(1.13); z-index:10; box-shadow:0 8px 40px rgba(0,0,0,.8); }
+.card:focus-visible {
+  transform:scale(1.13);
+  z-index:10;
+  box-shadow:0 8px 40px rgba(0,0,0,.8);
+}
 .card.portrait { width:145px; }
 
 .card-thumb {
@@ -27,6 +32,16 @@
   display:block;
 }
 .card:hover .card-thumb img { filter:brightness(.65); }
+.card:focus-visible .card-thumb img { filter:brightness(.65); }
+
+/* If only a vertical poster exists for a horizontal card, avoid harsh crop. */
+.card.landscape-vertical-src .card-thumb {
+  background:radial-gradient(circle at center, #2a2a2a 0%, #171717 75%);
+}
+.card.landscape-vertical-src .card-thumb img {
+  object-fit:contain;
+  padding:6px 10px;
+}
 
 .card-placeholder {
   width:100%; height:100%;
@@ -54,6 +69,7 @@
   padding:10px 8px;
 }
 .card:hover .card-overlay { opacity:1; }
+.card:focus-visible .card-overlay { opacity:1; }
 
 .card-quick { display:flex; gap:5px; margin-bottom:5px; }
 

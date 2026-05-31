@@ -1,0 +1,26 @@
+{
+  "name": "rextv",
+  "version": "1.0.0",
+  "description": "Aplicación estilo Netflix para LG TV (WebOS) que consume el catálogo de AllCalidad.",
+  "main": "index.js",
+  "scripts": {
+    "build:webos": "node build-webos.js",
+    "package:webos": "npm run build:webos && ares-package .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RonaldArc503/LGREX.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/RonaldArc503/LGREX/issues"
+  },
+  "homepage": "https://github.com/RonaldArc503/LGREX#readme",
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}
