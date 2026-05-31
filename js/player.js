@@ -332,6 +332,33 @@ const Player = (() => {
     });
   }
 
+  function _updateVolumeIcon(v = vid()) {
+    if (!v) return;
+    $('p-vol-icon').textContent = (v.muted || v.volume === 0) ? '🔇' : '🔊';
+  }
+
+  function _attemptAutoUnmute(v) {
+    if (!v) return;
+    setTimeout(() => {
+      if (v.paused) return;
+
+      v.muted = false;
+      v.defaultMuted = false;
+      const p = v.play();
+
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => {
+          // Some browsers keep autoplay only if audio stays muted.
+          v.muted = true;
+          v.defaultMuted = true;
+          _log('Autoplay con sonido bloqueado por el navegador', '#f5c518');
+        }).finally(() => _updateVolumeIcon(v));
+      } else {
+        _updateVolumeIcon(v);
+      }
+    }, 280);
+  }
+
   function _playWithAutoplayFallback(v, context = '') {
     if (!v) return Promise.resolve();
 
@@ -339,7 +366,9 @@ const Player = (() => {
     v.muted = true;
     v.defaultMuted = true;
 
-    const startPlayback = () => v.play().catch(err => {
+    const startPlayback = () => v.play().then(() => {
+      _attemptAutoUnmute(v);
+    }).catch(err => {
       console.warn('[Player] autoplay blocked', context, err);
       return new Promise((resolve, reject) => {
         const retry = () => {
@@ -347,6 +376,7 @@ const Player = (() => {
           v.removeEventListener('loadedmetadata', retry);
           v.play().then(() => {
             _log('Reproducción automática activada', '#46d369');
+            _attemptAutoUnmute(v);
             resolve();
           }).catch(err2 => {
             console.warn('[Player] autoplay retry failed', context, err2);
