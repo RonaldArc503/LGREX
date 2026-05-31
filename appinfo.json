@@ -1,0 +1,25 @@
+{
+  "id":          "com.rextv.app",
+  "version":     "1.0.0",
+  "vendor":      "REX TV",
+  "type":        "web",
+  "main":        "index.html",
+  "title":       "REX TV",
+  "icon":        "assets/icon.png",
+  "largeIcon":   "assets/icon_large.png",
+  "bgImage":     "assets/splash.png",
+  "bgColor":     "#0a0a0a",
+  "iconColor":   "#e50914",
+  "splashBackground": "#0a0a0a",
+  "disableBackHistoryAPI": false,
+  "allowVideoCapture":     false,
+  "allowAudioCapture":     false,
+  "handlesRelaunch":       false,
+  "transparent":           false,
+  "tileSize":    "normal",
+  "resolution":  "1920x1080",
+  "requiredPermissions": [
+    "LAUNCH",
+    "LAUNCH_PARAMS"
+  ]
+}

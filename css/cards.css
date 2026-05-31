@@ -1,0 +1,95 @@
+/* ════════ CARDS ════════ */
+.card {
+  flex-shrink:0;
+  width:var(--card-w);
+  cursor:pointer;
+  border-radius:4px;
+  overflow:hidden;
+  transition:transform .3s cubic-bezier(.4,0,.2,1), z-index 0s;
+  position:relative;
+  background:var(--bg3);
+}
+.card:hover { transform:scale(1.13); z-index:10; box-shadow:0 8px 40px rgba(0,0,0,.8); }
+.card.portrait { width:145px; }
+
+.card-thumb {
+  width:100%;
+  aspect-ratio:16/9;
+  background:var(--bg4);
+  position:relative;
+  overflow:hidden;
+}
+.card.portrait .card-thumb { aspect-ratio:2/3; }
+.card-thumb img {
+  width:100%; height:100%;
+  object-fit:cover;
+  transition:filter .3s;
+  display:block;
+}
+.card:hover .card-thumb img { filter:brightness(.65); }
+
+.card-placeholder {
+  width:100%; height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  background:linear-gradient(135deg,#1a1a2e,#16213e);
+}
+.card-placeholder span {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:44px;
+  color:rgba(255,255,255,.12);
+}
+
+.card-overlay {
+  position:absolute; inset:0;
+  background:linear-gradient(to top, rgba(0,0,0,.92) 0%, transparent 55%);
+  opacity:0;
+  transition:opacity .25s;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:10px 8px;
+}
+.card:hover .card-overlay { opacity:1; }
+
+.card-quick { display:flex; gap:5px; margin-bottom:5px; }
+
+.cq-btn {
+  width:28px; height:28px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.6);
+  background:rgba(0,0,0,.5);
+  color:#fff;
+  font-size:11px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition:all .2s;
+  flex-shrink:0;
+}
+.cq-btn:hover            { border-color:#fff; background:rgba(255,255,255,.15); }
+.cq-btn.play-btn         { background:var(--text); border-color:var(--text); color:#000; }
+.cq-btn.play-btn:hover   { background:#ddd; }
+
+.card-match  { font-size:10px; color:#46d369; font-weight:700; margin-top:2px; }
+.card-info   { padding:7px 6px 6px; }
+.card-name   { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-sub    { font-size:11px; color:var(--text3); margin-top:2px; display:flex; gap:5px; align-items:center; }
+.card-sub .m { color:#46d369; font-weight:600; }
+
+/* channel cards */
+.card.channel-card .card-thumb {
+  background:#111;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.card.channel-card .card-thumb img {
+  object-fit:contain;
+  padding:12px;
+  max-height:80px;
+  width:auto;
+  margin:auto;
+}

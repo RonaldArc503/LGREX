@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REX TV</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/nav.css">
+<link rel="stylesheet" href="css/hero.css">
+<link rel="stylesheet" href="css/cards.css">
+<link rel="stylesheet" href="css/detail.css">
+<link rel="stylesheet" href="css/player.css">
+<link rel="stylesheet" href="css/search.css">
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav id="nav">
+  <div class="nav-logo" onclick="App.goHome()">REX</div>
+  <div class="nav-links">
+    <span class="nav-link active" data-section="home"    onclick="App.switchSection('home',this)">Inicio</span>
+    <span class="nav-link"        data-section="movies"  onclick="App.switchSection('movies',this)">Películas</span>
+    <span class="nav-link"        data-section="series"  onclick="App.switchSection('series',this)">Series</span>
+    <span class="nav-link"        data-section="animes"  onclick="App.switchSection('animes',this)">Anime</span>
+    <span class="nav-link"        data-section="channels" onclick="App.switchSection('channels',this)">Canales</span>
+  </div>
+  <div class="nav-right">
+    <div class="nav-search-wrap">
+      <span style="font-size:13px;opacity:.5">⌕</span>
+      <input type="text" placeholder="Buscar..." id="nav-q"
+        onfocus="Search.open()" oninput="Search.handle(this.value)">
+    </div>
+    <div class="nav-avatar">R</div>
+  </div>
+</nav>
+
+<!-- ══ MAIN SCROLL ══ -->
+<div id="main" onscroll="App.onScroll(this)">
+
+  <!-- HERO -->
+  <div id="hero">
+    <div class="hero-loading" id="hero-loading">
+      <div class="spinner"></div>
+      <span style="color:var(--text3);font-size:13px">Cargando catálogo...</span>
+    </div>
+    <div class="hero-bg"></div>
+    <img class="hero-backdrop" id="hero-backdrop" src="" alt=""
+         style="opacity:0;transition:opacity .8s">
+    <div class="hero-content">
+      <div class="hero-source" id="hero-source">★ DESTACADO</div>
+      <h1 class="hero-title" id="hero-title"></h1>
+      <div class="hero-meta">
+        <span class="hero-rating" id="hero-rating"></span>
+        <div class="hero-sep" id="hs1"></div>
+        <span class="hero-year"  id="hero-year"></span>
+        <div class="hero-sep"></div>
+        <span class="hero-genre" id="hero-genre"></span>
+        <div class="hero-sep"></div>
+        <span class="hero-dur"   id="hero-dur"></span>
+      </div>
+      <p class="hero-desc" id="hero-desc"></p>
+      <div class="hero-btns">
+        <button class="btn-play" onclick="Hero.play()">▶ Reproducir</button>
+        <button class="btn-info" onclick="Hero.openDetail()">ℹ Más info</button>
+      </div>
+    </div>
+    <div class="hero-dots" id="hero-dots"></div>
+  </div>
+
+  <!-- SECTION CONTAINERS -->
+  <div id="rows-home"     class="rows-wrap"></div>
+  <div id="rows-movies"   class="rows-wrap no-hero" style="display:none"></div>
+  <div id="rows-series"   class="rows-wrap no-hero" style="display:none"></div>
+  <div id="rows-animes"   class="rows-wrap no-hero" style="display:none"></div>
+  <div id="rows-channels" class="rows-wrap no-hero" style="display:none"></div>
+</div>
+
+<!-- ══ DETAIL PANEL ══ -->
+<div id="detail" onclick="Detail.outsideClick(event)">
+  <div class="detail-box" id="detail-box">
+    <div class="d-hero">
+      <img id="d-backdrop" src="" alt="" onerror="this.style.display='none'">
+      <div class="d-hero-fade"></div>
+      <button class="d-close" onclick="Detail.close()">✕</button>
+    </div>
+    <div class="d-body">
+      <h1 class="d-title" id="d-title"></h1>
+      <div class="d-meta">
+        <span class="d-match" id="d-match"></span>
+        <span class="d-year"  id="d-year"></span>
+        <span class="d-dur"   id="d-dur"></span>
+        <span class="d-qual">HD</span>
+      </div>
+      <div class="d-tags"    id="d-tags"></div>
+      <div class="d-actions">
+        <button class="d-play-btn" id="d-play-btn" onclick="Detail.play()">▶ Reproducir</button>
+        <button class="d-circle" title="Mi Lista"  onclick="UI.addList()">＋</button>
+        <button class="d-circle" title="Me gusta"  onclick="UI.toast('👍 Te gusta este contenido')">👍</button>
+        <button class="d-circle" title="Compartir" onclick="UI.copyLink()">↗</button>
+      </div>
+      <p class="d-desc" id="d-desc"></p>
+      <p class="d-cast" id="d-cast"></p>
+
+      <!-- SERIES: Season/Episode browser -->
+      <div id="d-eps-section" style="display:none">
+        <div class="d-eps-header">
+          <h3 class="d-section-title" id="d-eps-heading">Episodios</h3>
+          <div class="d-season-select-wrap" id="d-season-select-wrap" style="display:none">
+            <select id="d-season-select" onchange="Detail.onSeasonChange(this.value)"></select>
+          </div>
+        </div>
+        <div class="d-episodes" id="d-eps-list"></div>
+        <div class="d-autoplay-bar">
+          <label class="autoplay-toggle">
+            <input type="checkbox" id="autoplay-check" checked>
+            <span>Reproducción automática</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- MOVIES: Server tabs -->
+      <div id="d-servers-section" style="display:none">
+        <h3 class="d-section-title">Servidores</h3>
+        <div class="d-server-tabs" id="d-server-tabs"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PLAYER ══ -->
+<div id="player">
+  <div class="p-video-wrap" id="p-video-wrap">
+    <video id="video-el" preload="metadata" playsinline></video>
+    <iframe id="iframe-el" allowfullscreen allow="autoplay;fullscreen"></iframe>
+
+    <div class="p-loading" id="p-loading">
+      <div class="spinner"></div>
+      <div class="p-loading-title" id="p-loading-title">Conectando...</div>
+    </div>
+
+    <!-- Title bar top -->
+    <div class="p-title-bar" id="p-title-bar">
+      <div class="p-title-info">
+        <button class="p-close" onclick="Player.close()">← Volver</button>
+        <span class="p-title" id="p-title-el"></span>
+        <span class="p-ep-label" id="p-ep-label"></span>
+      </div>
+      <div class="p-top-right">
+        <button class="p-btn" onclick="Player.toggleFS()" title="Pantalla completa">⛶</button>
+      </div>
+    </div>
+
+    <!-- Bottom controls -->
+    <div class="p-ctrl-bar" id="p-ctrl-bar">
+      <div class="p-servers" id="p-servers"></div>
+      <div class="p-progress" id="p-progress" onclick="Player.seek(event)">
+        <div class="p-fill"  id="p-fill"  style="width:0%"></div>
+        <div class="p-thumb"></div>
+      </div>
+      <div class="p-row">
+        <button class="p-btn"  onclick="Player.togglePlay()" id="p-play-btn">▶</button>
+        <button class="p-btn"  onclick="Player.skip(-10)"    title="-10s">⏪</button>
+        <button class="p-btn"  onclick="Player.skip(10)"     title="+10s">⏩</button>
+        <!-- SERIES ONLY: Prev/Next episode -->
+        <button class="p-btn p-ep-nav" id="p-prev-ep" onclick="Player.prevEp()" title="Episodio anterior" style="display:none">⏮</button>
+        <button class="p-btn p-ep-nav" id="p-next-ep" onclick="Player.nextEp()" title="Siguiente episodio" style="display:none">⏭</button>
+        <span class="p-time" id="p-time">0:00 / 0:00</span>
+        <div class="p-sep"></div>
+        <div class="vol-wrap">
+          <button class="p-btn" onclick="Player.toggleMute()" id="p-vol-icon" style="font-size:16px">🔊</button>
+          <input class="vol-slider" type="range" min="0" max="1" step="0.05" value="1"
+                 oninput="Player.setVol(this.value)">
+        </div>
+        <button class="p-btn" onclick="Player.toggleFS()" title="Pantalla completa" style="font-size:16px">⛶</button>
+      </div>
+    </div>
+
+    <!-- AUTOPLAY NEXT EPISODE overlay -->
+    <div class="p-autoplay-next" id="p-autoplay-next" style="display:none">
+      <div class="p-autoplay-card">
+        <span class="p-autoplay-label">A continuación</span>
+        <div class="p-autoplay-title" id="p-autoplay-ep-title"></div>
+        <div class="p-autoplay-actions">
+          <button class="p-autoplay-btn play" onclick="Player.playNextNow()">▶ Reproducir ahora</button>
+          <button class="p-autoplay-btn cancel" onclick="Player.cancelAutoplay()">Cancelar</button>
+        </div>
+        <div class="p-autoplay-bar-wrap">
+          <div class="p-autoplay-progress" id="p-autoplay-progress"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SEARCH ══ -->
+<div id="search-view">
+  <div class="sv-header">
+    <button class="sv-back" onclick="Search.close()">←</button>
+    <input class="sv-input" id="sv-input" type="text"
+           placeholder="Buscar películas, series, animes..."
+           oninput="Search.handle(this.value)" autofocus>
+  </div>
+  <div class="sv-results" id="sv-results">
+    <div class="sv-empty">Escribe para buscar contenido</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══ SCRIPTS ══ -->
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/hero.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/detail.js"></script>
+<script src="js/player.js"></script>
+<script src="js/search.js"></script>
+<script src="js/sections.js"></script>
+<script src="js/app.js"></script>
+<script src="js/webos.js"></script>
+</body>
+</html>
