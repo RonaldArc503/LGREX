@@ -1,8 +1,8 @@
 "use strict";
-const TVFocus = (() => {
-  let scheduledEnsure = false;
-  let rafId = 0;
-  const SELECTORS = {
+var TVFocus = (function() {
+  var scheduledEnsure = false;
+  var rafId = 0;
+  var SELECTORS = {
     main: [
       "#nav .nav-logo",
       "#nav .nav-link",
@@ -20,7 +20,10 @@ const TVFocus = (() => {
       "#detail #d-season-select",
       "#detail .server-tab",
       "#detail .ep-row",
-      "#detail #autoplay-check"
+      "#detail #autoplay-check",
+      ".ep-card",
+      ".btn-play-large",
+      ".btn-back-circle"
     ].join(", "),
     search: [
       "#search-view .sv-back",
@@ -37,17 +40,19 @@ const TVFocus = (() => {
     ].join(", ")
   };
   function getContext() {
-    var _a, _b, _c;
-    if ((_a = document.getElementById("player")) == null ? void 0 : _a.classList.contains("open")) return "player";
-    if ((_b = document.getElementById("detail")) == null ? void 0 : _b.classList.contains("open")) return "detail";
-    if ((_c = document.getElementById("search-view")) == null ? void 0 : _c.classList.contains("open")) return "search";
+    var p = document.getElementById("player");
+    if (p && p.classList.contains("open")) return "player";
+    var d = document.getElementById("dc-container");
+    if (d) return "detail";
+    var s = document.getElementById("search-view");
+    if (s && s.classList.contains("open")) return "search";
     return "main";
   }
   function isVisible(el) {
     if (!el || el.disabled) return false;
-    const style = window.getComputedStyle(el);
+    var style = window.getComputedStyle(el);
     if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return false;
-    const rect = el.getBoundingClientRect();
+    var rect = el.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0;
   }
   function markFocusable(el) {
@@ -55,13 +60,14 @@ const TVFocus = (() => {
     if (!el.matches("button, input, select, textarea, a, [tabindex]")) {
       el.tabIndex = 0;
     }
-    if (el.matches(".card, .nav-link, .nav-logo, .nav-avatar, .ep-row, .server-tab, .p-srv-btn, .hero-dot")) {
+    if (el.matches(".card, .nav-link, .nav-logo, .nav-avatar, .ep-row, .server-tab, .p-srv-btn, .hero-dot, .ep-card, .btn-play-large, .btn-back-circle")) {
       el.setAttribute("role", "button");
     }
     el.classList.add("tv-focusable");
   }
-  function getCandidates(ctx = getContext()) {
-    const list = [...document.querySelectorAll(SELECTORS[ctx])].filter(isVisible);
+  function getCandidates(ctx) {
+    if (!ctx) ctx = getContext();
+    var list = Array.from(document.querySelectorAll(SELECTORS[ctx])).filter(isVisible);
     list.forEach(markFocusable);
     return list;
   }
@@ -71,7 +77,7 @@ const TVFocus = (() => {
       return document.querySelector("#nav .nav-link.active") || document.querySelector("#hero .btn-play") || list[0];
     }
     if (ctx === "detail") {
-      return document.getElementById("d-play-btn") || list[0];
+      return document.querySelector(".btn-play-large") || document.querySelector(".ep-card") || list[0];
     }
     if (ctx === "search") {
       return document.getElementById("sv-input") || list[0];
@@ -89,23 +95,24 @@ const TVFocus = (() => {
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   }
   function selectByDirection(from, candidates, dir) {
-    const fromRect = from.getBoundingClientRect();
-    const a = center(fromRect);
-    let best = null;
-    let bestScore = Number.POSITIVE_INFINITY;
-    for (const el of candidates) {
+    var fromRect = from.getBoundingClientRect();
+    var a = center(fromRect);
+    var best = null;
+    var bestScore = Number.POSITIVE_INFINITY;
+    for (var i = 0; i < candidates.length; i++) {
+      var el = candidates[i];
       if (el === from) continue;
-      const rect = el.getBoundingClientRect();
-      const b = center(rect);
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
+      var rect = el.getBoundingClientRect();
+      var b = center(rect);
+      var dx = b.x - a.x;
+      var dy = b.y - a.y;
       if (dir === "left" && dx >= -5) continue;
       if (dir === "right" && dx <= 5) continue;
       if (dir === "up" && dy >= -5) continue;
       if (dir === "down" && dy <= 5) continue;
-      const primary = dir === "left" || dir === "right" ? Math.abs(dx) : Math.abs(dy);
-      const secondary = dir === "left" || dir === "right" ? Math.abs(dy) : Math.abs(dx);
-      const score = primary * 1e3 + secondary;
+      var primary = dir === "left" || dir === "right" ? Math.abs(dx) : Math.abs(dy);
+      var secondary = dir === "left" || dir === "right" ? Math.abs(dy) : Math.abs(dx);
+      var score = primary * 1e3 + secondary;
       if (score < bestScore) {
         best = el;
         bestScore = score;
@@ -114,13 +121,13 @@ const TVFocus = (() => {
     return best;
   }
   function _isMainNav(el) {
-    return !!(el == null ? void 0 : el.closest("#nav"));
+    return !!(el && el.closest("#nav"));
   }
   function _isHero(el) {
-    return !!(el == null ? void 0 : el.closest("#hero"));
+    return !!(el && el.closest("#hero"));
   }
   function _isCard(el) {
-    return !!(el == null ? void 0 : el.closest(".card"));
+    return !!(el && el.closest(".card"));
   }
   function _visible(el) {
     return !!el && isVisible(el);
@@ -129,77 +136,72 @@ const TVFocus = (() => {
     return document.querySelector("#nav .nav-link.active") || document.querySelector("#nav .nav-logo") || document.querySelector("#nav .nav-link");
   }
   function _mainNavItems() {
-    return [
-      ...document.querySelectorAll("#nav .nav-logo, #nav .nav-link, #nav-q, #nav .nav-avatar")
-    ].filter(_visible);
+    return Array.from(document.querySelectorAll("#nav .nav-logo, #nav .nav-link, #nav-q, #nav .nav-avatar")).filter(_visible);
   }
   function _heroItems() {
-    return [
-      ...document.querySelectorAll("#hero .btn-play, #hero .btn-info, #hero .hero-dot")
-    ].filter(_visible);
+    return Array.from(document.querySelectorAll("#hero .btn-play, #hero .btn-info, #hero .hero-dot")).filter(_visible);
   }
   function _visibleRows() {
-    return [
-      ...document.querySelectorAll('.rows-wrap:not([style*="display: none"]) .row-scroll')
-    ].filter(_visible);
+    return Array.from(document.querySelectorAll('.rows-wrap:not([style*="display: none"]) .row-scroll')).filter(_visible);
   }
   function _rowCards(rowEl) {
     if (!rowEl) return [];
-    return [...rowEl.querySelectorAll(".card")].filter(_visible);
+    return Array.from(rowEl.querySelectorAll(".card")).filter(_visible);
   }
   function _firstCard() {
-    const rows = _visibleRows();
-    for (const row of rows) {
-      const cards = _rowCards(row);
+    var rows = _visibleRows();
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var cards = _rowCards(row);
       if (cards.length) return cards[0];
     }
     return null;
   }
   function _moveWithinList(current, list, direction) {
     if (!list.length) return false;
-    const idx = Math.max(0, list.indexOf(current));
-    let nextIdx = idx;
+    var idx = Math.max(0, list.indexOf(current));
+    var nextIdx = idx;
     if (direction === "left") nextIdx = Math.max(0, idx - 1);
     if (direction === "right") nextIdx = Math.min(list.length - 1, idx + 1);
     return focusElement(list[nextIdx]);
   }
   function _moveCardsByRows(currentCard, direction) {
-    const currentRow = currentCard == null ? void 0 : currentCard.closest(".row-scroll");
+    var currentRow = currentCard ? currentCard.closest(".row-scroll") : null;
     if (!currentRow) return false;
-    const rows = _visibleRows();
-    const rowIdx = rows.indexOf(currentRow);
+    var rows = _visibleRows();
+    var rowIdx = rows.indexOf(currentRow);
     if (rowIdx < 0) return false;
-    const cardsInCurrent = _rowCards(currentRow);
-    const colIdx = Math.max(0, cardsInCurrent.indexOf(currentCard));
+    var cardsInCurrent = _rowCards(currentRow);
+    var colIdx = Math.max(0, cardsInCurrent.indexOf(currentCard));
     if (direction === "left" || direction === "right") {
       return _moveWithinList(currentCard, cardsInCurrent, direction);
     }
     if (direction === "up") {
       if (rowIdx === 0) {
-        const hero = _heroItems();
+        var hero = _heroItems();
         if (hero.length) return focusElement(hero[0]);
-        const nav = _activeNavElement();
+        var nav = _activeNavElement();
         if (nav) return focusElement(nav);
         return false;
       }
-      const targetCards = _rowCards(rows[rowIdx - 1]);
-      if (!targetCards.length) return false;
-      return focusElement(targetCards[Math.min(colIdx, targetCards.length - 1)]);
+      var targetCardsUp = _rowCards(rows[rowIdx - 1]);
+      if (!targetCardsUp.length) return false;
+      return focusElement(targetCardsUp[Math.min(colIdx, targetCardsUp.length - 1)]);
     }
     if (direction === "down") {
       if (rowIdx >= rows.length - 1) return false;
-      const targetCards = _rowCards(rows[rowIdx + 1]);
-      if (!targetCards.length) return false;
-      return focusElement(targetCards[Math.min(colIdx, targetCards.length - 1)]);
+      var targetCardsDown = _rowCards(rows[rowIdx + 1]);
+      if (!targetCardsDown.length) return false;
+      return focusElement(targetCardsDown[Math.min(colIdx, targetCardsDown.length - 1)]);
     }
     return false;
   }
   function moveMain(direction) {
-    const current = document.activeElement;
-    const navItems = _mainNavItems();
-    const heroItems = _heroItems();
+    var current = document.activeElement;
+    var navItems = _mainNavItems();
+    var heroItems = _heroItems();
     if (!current || current === document.body) {
-      const preferred = _activeNavElement() || heroItems[0] || _firstCard();
+      var preferred = _activeNavElement() || heroItems[0] || _firstCard();
       return focusElement(preferred);
     }
     if (_isMainNav(current)) {
@@ -233,24 +235,24 @@ const TVFocus = (() => {
     return false;
   }
   function move(direction) {
-    const ctx = getContext();
+    var ctx = getContext();
     if (ctx === "main") {
-      const handled = moveMain(direction);
+      var handled = moveMain(direction);
       if (handled) return true;
     }
-    const candidates = getCandidates(ctx);
+    var candidates = getCandidates(ctx);
     if (!candidates.length) return false;
-    let current = document.activeElement;
-    if (!candidates.includes(current)) {
+    var current = document.activeElement;
+    if (candidates.indexOf(current) < 0) {
       current = getPreferred(ctx, candidates);
       return focusElement(current);
     }
-    const target = selectByDirection(current, candidates, direction);
+    var target = selectByDirection(current, candidates, direction);
     if (!target) return false;
     return focusElement(target);
   }
   function clickFocused() {
-    const el = document.activeElement;
+    var el = document.activeElement;
     if (!el) return false;
     if (el.matches('input[type="text"], textarea')) return false;
     if (el.matches('input[type="checkbox"]')) {
@@ -265,25 +267,25 @@ const TVFocus = (() => {
     return false;
   }
   function ensureContextFocus() {
-    const ctx = getContext();
-    const candidates = getCandidates(ctx);
+    var ctx = getContext();
+    var candidates = getCandidates(ctx);
     if (!candidates.length) return;
-    if (candidates.includes(document.activeElement)) return;
+    if (candidates.indexOf(document.activeElement) >= 0) return;
     focusElement(getPreferred(ctx, candidates));
   }
   function scheduleEnsureContextFocus() {
     if (scheduledEnsure) return;
     scheduledEnsure = true;
-    rafId = window.requestAnimationFrame(() => {
+    rafId = window.requestAnimationFrame(function() {
       scheduledEnsure = false;
       ensureContextFocus();
     });
   }
   function handleKeydown(e) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return false;
-    const key = e.key;
-    const active = document.activeElement;
-    const inTextInput = !!active && active.matches('input[type="text"], textarea');
+    var key = e.key;
+    var active = document.activeElement;
+    var inTextInput = !!active && active.matches('input[type="text"], textarea');
     if (inTextInput) {
       if (key === "ArrowDown") {
         e.preventDefault();
@@ -314,7 +316,7 @@ const TVFocus = (() => {
     if (key === "MediaPlayPause" || key === "Play") {
       if (getContext() === "player") {
         e.preventDefault();
-        Player.togglePlay();
+        if (window.Player) Player.togglePlay();
         return true;
       }
     }
@@ -322,7 +324,7 @@ const TVFocus = (() => {
   }
   function init() {
     scheduleEnsureContextFocus();
-    const obs = new MutationObserver(() => {
+    var obs = new MutationObserver(function() {
       scheduleEnsureContextFocus();
     });
     obs.observe(document.body, {
@@ -331,22 +333,22 @@ const TVFocus = (() => {
     });
     window.addEventListener("focus", scheduleEnsureContextFocus, true);
     window.addEventListener("resize", scheduleEnsureContextFocus);
-    ["player", "detail", "search-view"].forEach((id) => {
-      const el = document.getElementById(id);
+    ["player", "detail", "search-view", "dc-container"].forEach(function(id) {
+      var el = document.getElementById(id);
       if (!el) return;
-      const panelObs = new MutationObserver(scheduleEnsureContextFocus);
+      var panelObs = new MutationObserver(scheduleEnsureContextFocus);
       panelObs.observe(el, { attributes: true, attributeFilter: ["class"] });
     });
-    document.querySelectorAll("#nav-q, #sv-input").forEach((input) => {
+    document.querySelectorAll("#nav-q, #sv-input").forEach(function(input) {
       input.addEventListener("blur", scheduleEnsureContextFocus);
     });
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener("beforeunload", function() {
       if (rafId) window.cancelAnimationFrame(rafId);
     });
   }
-  return { init, handleKeydown, ensureContextFocus };
+  return { init: init, handleKeydown: handleKeydown, ensureContextFocus: ensureContextFocus };
 })();
 window.TVFocus = TVFocus;
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", function() {
   TVFocus.init();
 });

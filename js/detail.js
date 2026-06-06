@@ -47,7 +47,7 @@ const Detail = /* @__PURE__ */ (() => {
   function _sortedSeasonsMap(mapLike) {
     const seasons = /* @__PURE__ */ new Map();
     if (!mapLike) return seasons;
-    const entries = mapLike instanceof Map ? [...mapLike.entries()] : Object.entries(mapLike);
+    const entries = mapLike instanceof Map ? Array.from(mapLike.entries()) : Object.entries(mapLike);
     entries.forEach(([seasonKey, list]) => {
       const seasonNumber = Number(seasonKey || 1);
       if (!Array.isArray(list)) return;
@@ -84,7 +84,7 @@ const Detail = /* @__PURE__ */ (() => {
     }
     pb.className = "d-play-btn";
     if (seasonsData && seasonsData.size) {
-      const firstSeason = [...seasonsData.keys()].sort((a, b) => Number(a) - Number(b))[0] || 1;
+      const firstSeason = Array.from(seasonsData.keys()).sort((a, b) => Number(a) - Number(b))[0] || 1;
       const firstCount = ((_a = seasonsData.get(firstSeason)) == null ? void 0 : _a.length) || 0;
       pb.innerHTML = firstCount ? `\u25B6 Reproducir T${firstSeason} E1` : "\u25B6 Reproducir";
     } else {
@@ -92,7 +92,7 @@ const Detail = /* @__PURE__ */ (() => {
     }
   }
   function _seasonNumbers() {
-    return [...(seasonsData == null ? void 0 : seasonsData.keys()) || []].sort((a, b) => Number(a) - Number(b));
+    return Array.from((seasonsData == null ? void 0 : seasonsData.keys()) || []).sort((a, b) => Number(a) - Number(b));
   }
   function _switchSeasonByOffset(offset) {
     const seasonNums = _seasonNumbers();
@@ -142,8 +142,10 @@ const Detail = /* @__PURE__ */ (() => {
       _updatePlayButtonLabel();
       document.getElementById("d-eps-section").style.display = "none";
       document.getElementById("d-servers-section").style.display = "none";
+      const wasOpen = document.getElementById("detail").classList.contains("open");
       document.getElementById("detail").classList.add("open");
       document.body.style.overflow = "hidden";
+      if (!wasOpen && window.Navigation) Navigation.recordOverlay("detail");
       if (item.postId && !item.isLive) {
         const loadedEpisodes = yield loadEpisodes(item);
         if (!loadedEpisodes) {
@@ -152,9 +154,10 @@ const Detail = /* @__PURE__ */ (() => {
       }
     });
   }
-  function close() {
+  function close(options = {}) {
     document.getElementById("detail").classList.remove("open");
     document.body.style.overflow = "";
+    if (!options.skipHistory && window.Navigation) Navigation.closeOverlayHistorySafe();
   }
   function outsideClick(e) {
     if (e.target === document.getElementById("detail")) close();
@@ -167,8 +170,8 @@ const Detail = /* @__PURE__ */ (() => {
       return;
     }
     if (seasonsData && seasonsData.size) {
-      const firstSeason = [...seasonsData.keys()].sort((a, b) => Number(a) - Number(b))[0];
-      const eps = seasonsData.get(firstSeason) || [...seasonsData.values()][0] || [];
+      const firstSeason = Array.from(seasonsData.keys()).sort((a, b) => Number(a) - Number(b))[0];
+      const eps = seasonsData.get(firstSeason) || Array.from(seasonsData.values())[0] || [];
       if (eps.length) {
         close();
         Player.openEpisode(current, eps, 0, seasonsData);
@@ -212,7 +215,7 @@ const Detail = /* @__PURE__ */ (() => {
       const data = yield Api.fetchEpisodes(item.postId);
       if (!data || !data.seasons || !data.seasons.size) return false;
       seasonsData = _sortedSeasonsMap(data.seasons);
-      const seasonNums = [...seasonsData.keys()].sort((a, b) => a - b);
+      const seasonNums = Array.from(seasonsData.keys()).sort((a, b) => a - b);
       currentSeason = seasonNums[0];
       const wrap = document.getElementById("d-season-select-wrap");
       const select = document.getElementById("d-season-select");
@@ -264,6 +267,13 @@ const Detail = /* @__PURE__ */ (() => {
       return true;
     });
   }
+  
+  function openWatchPage() {
+    if (!current) return;
+    const url = `detallecontenido.html?id=${encodeURIComponent(current.postId)}&type=${encodeURIComponent(current.type||'movie')}&title=${encodeURIComponent(current.title||'')}`;
+    window.location.href = url;
+  }
+
   function onSeasonChange(val) {
     currentSeason = Number(val);
     renderEpisodes(currentSeason);
@@ -273,7 +283,7 @@ const Detail = /* @__PURE__ */ (() => {
   function renderEpisodes(seasonNum) {
     const list = document.getElementById("d-eps-list");
     list.innerHTML = "";
-    const seasonKeys = [...(seasonsData == null ? void 0 : seasonsData.keys()) || []].sort((a, b) => Number(a) - Number(b));
+    const seasonKeys = Array.from((seasonsData == null ? void 0 : seasonsData.keys()) || []).sort((a, b) => Number(a) - Number(b));
     const activeSeason = Number(seasonNum || currentSeason || seasonKeys[0] || 1);
     const eps = (seasonsData == null ? void 0 : seasonsData.get(activeSeason)) || [];
     const heading = document.getElementById("d-eps-heading");
@@ -323,5 +333,5 @@ const Detail = /* @__PURE__ */ (() => {
       list.appendChild(row);
     });
   }
-  return { open, close, outsideClick, play, onSeasonChange };
+  return { open, close, outsideClick, play, onSeasonChange, openWatchPage };
 })();

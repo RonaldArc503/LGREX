@@ -1,24 +1,32 @@
 "use strict";
-const Store = /* @__PURE__ */ (() => {
-  const _itemMap = {};
-  const _loaded = {};
+var Store = (function() {
+  var _itemMap = {};
+  var _loaded = {};
   function save(item) {
-    if (item == null ? void 0 : item.id) _itemMap[String(item.id)] = item;
+    if (item && item.id) _itemMap[String(item.id)] = item;
   }
   function saveAll(items) {
-    items.forEach(save);
+    if (Array.isArray(items)) {
+      items.forEach(save);
+    }
   }
   function get(id) {
     return _itemMap[String(id)];
   }
   function all() {
-    return Object.values(_itemMap);
+    var keys = Object.keys(_itemMap);
+    var results = [];
+    for (var i = 0; i < keys.length; i++) {
+      results.push(_itemMap[keys[i]]);
+    }
+    return results;
   }
   function isLoaded(key) {
     return !!_loaded[key];
   }
-  function markLoaded(key) {
-    _loaded[key] = true;
+  function markLoaded(key, val) {
+    if (val === undefined) val = true;
+    _loaded[key] = val;
   }
-  return { save, saveAll, get, all, isLoaded, markLoaded };
+  return { save: save, saveAll: saveAll, get: get, all: all, isLoaded: isLoaded, markLoaded: markLoaded };
 })();

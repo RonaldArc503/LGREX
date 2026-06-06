@@ -1,22 +1,23 @@
 "use strict";
-const UI = /* @__PURE__ */ (() => {
+var UI = (function() {
   function toast(msg) {
-    const t = document.getElementById("toast");
+    var t = document.getElementById("toast");
+    if (!t) return;
     t.textContent = msg;
     t.classList.add("show");
-    setTimeout(() => t.classList.remove("show"), 3500);
+    setTimeout(function() { t.classList.remove("show"); }, 3500);
   }
   function addList() {
-    toast("\u2713 Agregado a Mi Lista");
+    toast("✓ Agregado a Mi Lista");
   }
   function copyLink() {
     if (navigator.clipboard) navigator.clipboard.writeText(location.href);
-    toast("\u{1F517} Enlace copiado");
+    toast("🔗 Enlace copiado");
   }
   function fmt(s) {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
+    var m = Math.floor(s / 60);
+    var sec = Math.floor(s % 60);
     return m + ":" + (sec < 10 ? "0" : "") + sec;
   }
-  return { toast, addList, copyLink, fmt };
+  return { toast: toast, addList: addList, copyLink: copyLink, fmt: fmt };
 })();

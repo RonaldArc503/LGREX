@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REX TV — Reproductor</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/player.css">
+<style>
+  html, body { 
+    margin: 0; padding: 0; width: 100%; height: 100%; 
+    background: #000; overflow: hidden; 
+  }
+  #player-standalone {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    background: #000;
+  }
+  /* Forzar que el player ocupe todo */
+  #player {
+    display: flex !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+</style>
+</head>
+<body>
+
+<div id="player-standalone">
+  <!-- Reutilizamos el marcado exacto que espera player.js -->
+  <div id="player" class="open">
+    <div class="p-video-wrap" id="p-video-wrap">
+      <video id="video-el" preload="metadata" playsinline></video>
+      <iframe id="iframe-el" allow="autoplay;fullscreen"></iframe>
+
+      <div class="p-loading" id="p-loading">
+        <div class="spinner"></div>
+        <div class="p-loading-title" id="p-loading-title">Conectando...</div>
+      </div>
+
+      <div class="p-title-bar" id="p-title-bar">
+        <div class="p-title-info">
+          <button class="p-close" onclick="history.back()">← Volver</button>
+          <span class="p-title" id="p-title-el"></span>
+          <span class="p-ep-label" id="p-ep-label"></span>
+        </div>
+        <div class="p-top-right">
+          <button class="p-btn" onclick="Player.toggleFS()" title="Pantalla completa">⛶</button>
+        </div>
+      </div>
+
+      <div class="p-ctrl-bar" id="p-ctrl-bar">
+        <div class="p-servers" id="p-servers"></div>
+        <div class="p-progress" id="p-progress" onclick="Player.seek(event)">
+          <div class="p-fill" id="p-fill" style="width:0%"></div>
+          <div class="p-thumb"></div>
+        </div>
+        <div class="p-row">
+          <button class="p-btn" onclick="Player.togglePlay()" id="p-play-btn">▶</button>
+          <button class="p-btn" onclick="Player.skip(-10)" title="-10s">⏪</button>
+          <button class="p-btn" onclick="Player.skip(10)"  title="+10s">⏩</button>
+          <button class="p-btn p-ep-nav" id="p-prev-ep" onclick="Player.prevEp()" title="Ep. anterior" style="display:none">⏮</button>
+          <button class="p-btn p-ep-nav" id="p-next-ep" onclick="Player.nextEp()" title="Sig. episodio" style="display:none">⏭</button>
+          <span class="p-time" id="p-time">0:00 / 0:00</span>
+          <div class="p-sep"></div>
+          <div class="vol-wrap">
+            <button class="p-btn" onclick="Player.toggleMute()" id="p-vol-icon" style="font-size:16px">🔊</button>
+            <input class="vol-slider" type="range" min="0" max="1" step="0.05" value="1"
+                   oninput="Player.setVol(this.value)">
+          </div>
+          <button class="p-btn" onclick="Player.toggleFS()" title="Pantalla completa" style="font-size:16px">⛶</button>
+        </div>
+      </div>
+
+      <div class="p-autoplay-next" id="p-autoplay-next" style="display:none">
+        <div class="p-autoplay-card">
+          <span class="p-autoplay-label">A continuación</span>
+          <div class="p-autoplay-title" id="p-autoplay-ep-title"></div>
+          <div class="p-autoplay-actions">
+            <button class="p-autoplay-btn play"   onclick="Player.playNextNow()">▶ Reproducir ahora</button>
+            <button class="p-autoplay-btn cancel" onclick="Player.cancelAutoplay()">Cancelar</button>
+          </div>
+          <div class="p-autoplay-bar-wrap">
+            <div class="p-autoplay-progress" id="p-autoplay-progress"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="checkbox" id="autoplay-check" checked style="display:none">
+<div class="toast" id="toast"></div>
+
+<!-- SCRIPTS -->
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/player.js"></script>
+
+<script>
+  // Inicialización del reproductor en la página watch.html
+  (function() {
+    function _getParam(name) {
+      var reg = new RegExp('[?&]' + name + '=([^&#]*)', 'i');
+      var res = reg.exec(window.location.search);
+      return res ? res[1] : null;
+    }
+
+    function start() {
+      var postId = _getParam('id');
+      var type = _getParam('type');
+      var isLive = type === 'channel' || _getParam('isLive') === 'true';
+      var title = _getParam('title') ? decodeURIComponent(_getParam('title')) : '';
+      var season = _getParam('season') ? Number(_getParam('season')) : null;
+      var episode = _getParam('episode') ? Number(_getParam('episode')) : null;
+
+      if (!postId) {
+        history.back();
+        return;
+      }
+
+      var item = { id: postId, postId: postId, title: title, type: type, isLive: isLive };
+
+      // Si es una serie y tenemos temporada/episodio, necesitamos cargar el contexto de episodios
+      if ((type === 'tvshows' || type === 'anime') && season !== null) {
+        Api.fetchEpisodes(postId).then(function(res) {
+          if (res && res.seasons && res.seasons.size) {
+            var eps = res.seasons.get(season) || [];
+            var idx = 0;
+            if (episode !== null) {
+              for (var i = 0; i < eps.length; i++) {
+                if ((eps[i].number || eps[i].episode) === episode) {
+                  idx = i;
+                  break;
+                }
+              }
+            }
+            Player.openEpisode(item, eps, idx, res.seasons);
+          } else {
+            Player.open(item);
+          }
+        }).catch(function() {
+          Player.open(item);
+        });
+      } else {
+        Player.open(item);
+      }
+    }
+
+    // Pequeños stubs para evitar errores si player.js busca objetos globales
+    window.Detail = { close: function(){} };
+    window.Search = { close: function(){} };
+    window.App = { currentSection: function(){ return 'player'; } };
+
+    // En watch.html, cerrar el reproductor significa volver atrás
+    var _origClose = Player.close;
+    Player.close = function(opts) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(function(){});
+        return;
+      }
+      history.back();
+    };
+
+    document.addEventListener('DOMContentLoaded', start);
+  })();
+</script>
+</body>
+</html>

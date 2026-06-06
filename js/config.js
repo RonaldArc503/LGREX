@@ -1,16 +1,16 @@
 "use strict";
-const ALLCALIDAD = "https://allcalidad.re";
-const API = "https://allcalidad.re/api/rest";
-const IMG_BASE = "https://allcalidad.re";
-const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
-const TMDB_BACK = "https://image.tmdb.org/t/p/w1280";
-const TMDB_API_BASE = "https://api.themoviedb.org/3";
-const TMDB_API_KEY = "07a2f9f121ce6f9371fd05194a0fb7e3";
-const TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwN2EyZjlmMTIxY2U2ZjkzNzFmZDA1MTk0YTBmYjdlMyIsIm5iZiI6MTczMzM3MTk0OS41Mzc5OTk5LCJzdWIiOiI2NzUxMjgyZDkwM2YzMGU3M2I0MzNjN2YiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.XJ5KKACIjWUnEH6k-r5FMupxxADBY0NuQp72r1MCqzA";
-const AUTOPLAY_DELAY = 10;
-const ALLOW_IFRAME_FALLBACK = true;
-const GENRE_MAP = {};
-const YEAR_MAP = {};
+var ALLCALIDAD = "https://allcalidad.re";
+var API = "https://allcalidad.re/api/rest";
+var IMG_BASE = "https://allcalidad.re";
+var TMDB_IMG = "https://image.tmdb.org/t/p/w500";
+var TMDB_BACK = "https://image.tmdb.org/t/p/w1280";
+var TMDB_API_BASE = "https://api.themoviedb.org/3";
+var TMDB_API_KEY = "07a2f9f121ce6f9371fd05194a0fb7e3";
+var TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwN2EyZjlmMTIxY2U2ZjkzNzFmZDA1MTk0YTBmYjdlMyIsIm5iZiI6MTczMzM3MTk0OS41Mzc5OTk5LCJzdWIiOiI2NzUxMjgyZDkwM2YzMGU3M2I0MzNjN2YiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.XJ5KKACIjWUnEH6k-r5FMupxxADBY0NuQp72r1MCqzA";
+var AUTOPLAY_DELAY = 10;
+var ALLOW_IFRAME_FALLBACK = true;
+var GENRE_MAP = {};
+var YEAR_MAP = {};
 Object.assign(GENRE_MAP, {
   135: "Acci\xF3n",
   136: "Comedia",
@@ -38,7 +38,7 @@ Object.assign(GENRE_MAP, {
   158: "Biopic",
   295: "Crimen"
 });
-const CHANNELS = [
+var CHANNELS = [
   {
     id: "ch1",
     title: "Canal 4",

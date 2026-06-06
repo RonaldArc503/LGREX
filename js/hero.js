@@ -1,8 +1,9 @@
 "use strict";
-const Hero = /* @__PURE__ */ (() => {
-  let items = [];
-  let idx = 0;
-  let timer = null;
+var Hero = (function() {
+  var items = [];
+  var idx = 0;
+  var timer = null;
+
   function setItems(arr) {
     items = arr;
     idx = 0;
@@ -13,46 +14,63 @@ const Hero = /* @__PURE__ */ (() => {
     document.getElementById("hero-year").textContent = item.year || "";
     document.getElementById("hero-genre").textContent = item.genre || "";
     document.getElementById("hero-dur").textContent = item.dur || "";
-    document.getElementById("hero-rating").textContent = item.rating ? "\u2605 " + item.rating : "";
+    document.getElementById("hero-rating").textContent = item.rating ? "★ " + item.rating : "";
     document.getElementById("hero-desc").textContent = item.desc || "";
-    document.getElementById("hero-source").textContent = "\u2605 ALLCALIDAD";
-    const bd = document.getElementById("hero-backdrop");
-    const src = item.backdrop || item.poster || "";
+    document.getElementById("hero-source").textContent = "★ ALLCALIDAD";
+    var bd = document.getElementById("hero-backdrop");
+    var src = item.backdrop || item.poster || "";
     if (src) {
       bd.style.opacity = "0";
-      bd.onload = () => {
-        bd.style.opacity = "1";
-      };
+      bd.onload = function() { bd.style.opacity = "1"; };
       bd.src = src;
     }
   }
   function buildDots(n) {
-    const c = document.getElementById("hero-dots");
+    var c = document.getElementById("hero-dots");
+    if (!c) return;
     c.innerHTML = "";
-    for (let i = 0; i < n; i++) {
-      const d = document.createElement("div");
-      d.className = "hero-dot" + (i === 0 ? " active" : "");
-      d.onclick = () => go(i);
-      c.appendChild(d);
+    for (var i = 0; i < n; i++) {
+      (function(index) {
+        var d = document.createElement("div");
+        d.className = "hero-dot" + (index === 0 ? " active" : "");
+        d.onclick = function() { go(index); };
+        c.appendChild(d);
+      })(i);
     }
   }
   function go(i) {
     idx = i;
     render(items[i]);
-    document.querySelectorAll(".hero-dot").forEach((d, j) => d.classList.toggle("active", j === i));
+    var dots = document.querySelectorAll(".hero-dot");
+    for (var j = 0; j < dots.length; j++) {
+      dots[j].classList.toggle("active", j === i);
+    }
   }
   function startAuto() {
     clearInterval(timer);
-    timer = setInterval(() => {
+    timer = setInterval(function() {
       idx = (idx + 1) % items.length;
       go(idx);
     }, 7e3);
   }
+  /* ▶ Reproducir → go to watch.html directly */
   function play() {
-    if (items[idx]) Player.open(items[idx]);
+    if (items[idx]) _goDetail(items[idx], true);
   }
+  /* ℹ Más info → go to detallecontenido.html */
   function openDetail() {
-    if (items[idx]) Detail.open(items[idx]);
+    if (items[idx]) _goDetail(items[idx], false);
   }
-  return { setItems, render, buildDots, go, startAuto, play, openDetail };
+  function _goDetail(item, autoplay) {
+    if (window.Cards && Cards._goDetail) {
+      Cards._goDetail(item, autoplay);
+    } else {
+      var target = autoplay ? 'watch.html' : 'detallecontenido.html';
+      var url = target + '?id=' + encodeURIComponent(item.postId) + 
+                '&type=' + encodeURIComponent(item.type || 'movie') + 
+                '&title=' + encodeURIComponent(item.title || '');
+      window.location.href = url;
+    }
+  }
+  return { setItems: setItems, render: render, buildDots: buildDots, go: go, startAuto: startAuto, play: play, openDetail: openDetail };
 })();

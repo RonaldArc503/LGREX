@@ -4,118 +4,143 @@ var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __spreadValues = (a, b) => {
+var __defNormalProp = function(obj, key, value) {
+  return key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value: value }) : obj[key] = value;
+};
+var __spreadValues = function(a, b) {
   for (var prop in b || (b = {}))
     if (__hasOwnProp.call(b, prop))
       __defNormalProp(a, prop, b[prop]);
-  if (__getOwnPropSymbols)
-    for (var prop of __getOwnPropSymbols(b)) {
+  if (__getOwnPropSymbols) {
+    var symbols = __getOwnPropSymbols(b);
+    for (var i = 0; i < symbols.length; i++) {
+      var prop = symbols[i];
       if (__propIsEnum.call(b, prop))
         __defNormalProp(a, prop, b[prop]);
     }
+  }
   return a;
 };
-var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
-var __async = (__this, __arguments, generator) => {
-  return new Promise((resolve, reject) => {
-    var fulfilled = (value) => {
+var __spreadProps = function(a, b) {
+  return __defProps(a, __getOwnPropDescs(b));
+};
+var __async = function(__this, __arguments, generator) {
+  return new Promise(function(resolve, reject) {
+    var fulfilled = function(value) {
       try {
         step(generator.next(value));
       } catch (e) {
         reject(e);
       }
     };
-    var rejected = (value) => {
+    var rejected = function(value) {
       try {
         step(generator.throw(value));
       } catch (e) {
         reject(e);
       }
     };
-    var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+    var step = function(x) {
+      return x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+    };
     step((generator = generator.apply(__this, __arguments)).next());
   });
 };
-const Player = /* @__PURE__ */ (() => {
-  let hlsInstance = null;
-  let seriesContext = null;
-  let autoplayTimer = null;
-  const $ = (id) => document.getElementById(id);
-  const vid = () => $("video-el");
-  const ifr = () => $("iframe-el");
+var Player = (function() {
+  var hlsInstance = null;
+  var seriesContext = null;
+  var autoplayTimer = null;
+  var playbackCandidates = [];
+  var playbackCandidateIndex = -1;
+  var playbackRetrying = false;
+  var IS_WEBOS = navigator.userAgent.indexOf("Web0S") >= 0 || navigator.userAgent.indexOf("WebOS") >= 0 || navigator.userAgent.indexOf("SmartTV") >= 0 || typeof window.webOS !== "undefined";
+  var $ = function(id) { return document.getElementById(id); };
+  var vid = function() { return $("video-el"); };
+  var ifr = function() { return $("iframe-el"); };
   function _normText(value) {
     return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
   function _isSpanishAudio(track) {
-    const text = _normText([
-      track == null ? void 0 : track.label,
-      track == null ? void 0 : track.name,
-      track == null ? void 0 : track.lang,
-      track == null ? void 0 : track.language,
-      track == null ? void 0 : track.groupId
+    var text = _normText([
+      track && track.label,
+      track && track.name,
+      track && track.lang,
+      track && track.language,
+      track && track.groupId
     ].filter(Boolean).join(" "));
     return /\bes\b/.test(text) || /espanol/.test(text) || /spanish/.test(text) || /latino/.test(text) || /\bspa\b/.test(text);
   }
   function _preferSpanishAudioHls() {
     if (!hlsInstance || !hlsInstance.audioTracks || !hlsInstance.audioTracks.length) return false;
-    const tracks = hlsInstance.audioTracks;
-    const preferredIndex = tracks.findIndex(_isSpanishAudio);
+    var tracks = hlsInstance.audioTracks;
+    var preferredIndex = -1;
+    for (var i = 0; i < tracks.length; i++) {
+      if (_isSpanishAudio(tracks[i])) {
+        preferredIndex = i;
+        break;
+      }
+    }
     if (preferredIndex >= 0 && hlsInstance.audioTrack !== preferredIndex) {
       hlsInstance.audioTrack = preferredIndex;
-      _log("Audio espa\xF1ol seleccionado", "#46d369");
+      _log("Audio español seleccionado", "#46d369");
       return true;
     }
     return false;
   }
   function _preferSpanishAudioNative() {
-    var _a;
-    const audioTracks = (_a = vid()) == null ? void 0 : _a.audioTracks;
+    var v = vid();
+    var audioTracks = v && v.audioTracks;
     if (!audioTracks || !audioTracks.length) return false;
-    let preferredIndex = -1;
-    for (let i = 0; i < audioTracks.length; i++) {
+    var preferredIndex = -1;
+    for (var i = 0; i < audioTracks.length; i++) {
       if (_isSpanishAudio(audioTracks[i])) {
         preferredIndex = i;
         break;
       }
     }
     if (preferredIndex < 0) return false;
-    for (let i = 0; i < audioTracks.length; i++) {
-      audioTracks[i].enabled = i === preferredIndex;
+    for (var j = 0; j < audioTracks.length; j++) {
+      audioTracks[j].enabled = j === preferredIndex;
     }
-    _log("Audio espa\xF1ol seleccionado", "#46d369");
+    _log("Audio español seleccionado", "#46d369");
     return true;
   }
-  function _log(msg, color = "#aaa") {
+  function _log(msg, color) {
+    if (!color) color = "#aaa";
     console.log("[Player]", msg);
-    const el = $("p-loading-title");
-    if (el) el.innerHTML = `<span style="color:${color};font-size:12px">${msg}</span>`;
+    var el = $("p-loading-title");
+    if (el) el.innerHTML = '<span style="color:' + color + ';font-size:12px">' + msg + '</span>';
+  }
+  function _playbackUrlScore(url) {
+    var value = String(url || "").toLowerCase();
+    if (/\.m3u8(?:\?|#|$)/i.test(value)) return 0;
+    if (value.indexOf("vimeos.net") >= 0 || value.indexOf("goodstream.one") >= 0) return 1;
+    if (value.indexOf("hlswish.com") >= 0 || value.indexOf("streamwish.") >= 0 || value.indexOf("filemoon.") >= 0) return 8;
+    return 4;
   }
   function open(item) {
-    var _a;
     if (!item) return;
     seriesContext = null;
     _prepareUI(item.title, "");
     _showEpNav(false);
     cancelAutoplay();
-    if (item.isLive && ((_a = item.sources) == null ? void 0 : _a.length)) {
+    if (item.isLive && item.sources && item.sources.length) {
       _loadLive(item);
     } else {
       _resolveAndPlay(item);
     }
   }
   function openEpisode(series, episodes, index, seasonsData) {
-    var _a, _b, _c, _d, _e;
-    seriesContext = { series, episodes, index, seasonsData };
-    const ep = episodes[index];
-    const sn = (_b = (_a = ep.season) != null ? _a : ep.temporada) != null ? _b : 1;
-    const num = (_e = (_d = (_c = ep.number) != null ? _c : ep.episode) != null ? _d : ep.episodio) != null ? _e : index + 1;
-    const epLabel = `T${sn} E${num} \u2014 ${ep.title || ep.name || "Episodio " + num}`;
+    seriesContext = { series: series, episodes: episodes, index: index, seasonsData: seasonsData };
+    var ep = episodes[index];
+    var sn = ep.season || ep.temporada || 1;
+    var num = ep.number || ep.episode || ep.episodio || index + 1;
+    var epLabel = "T" + sn + " E" + num + " — " + (ep.title || ep.name || "Episodio " + num);
     _prepareUI(series.title, epLabel);
     _showEpNav(true);
     cancelAutoplay();
     _updateEpNavButtons();
-    const epItem = __spreadProps(__spreadValues({}, series), {
+    var epItem = __spreadProps(__spreadValues({}, series), {
       title: series.title,
       postId: ep._id || ep.id || ep.post_id || series.postId,
       embedUrl: ep.embed_url || ep.iframe || ""
@@ -124,55 +149,59 @@ const Player = /* @__PURE__ */ (() => {
   }
   function prevEp() {
     if (!seriesContext) return;
-    const { series, episodes, index, seasonsData } = seriesContext;
-    if (index > 0) openEpisode(series, episodes, index - 1, seasonsData);
+    var ctx = seriesContext;
+    if (ctx.index > 0) openEpisode(ctx.series, ctx.episodes, ctx.index - 1, ctx.seasonsData);
   }
   function nextEp() {
     if (!seriesContext) return;
-    const { series, episodes, index, seasonsData } = seriesContext;
-    if (index < episodes.length - 1) openEpisode(series, episodes, index + 1, seasonsData);
+    var ctx = seriesContext;
+    if (ctx.index < ctx.episodes.length - 1) openEpisode(ctx.series, ctx.episodes, ctx.index + 1, ctx.seasonsData);
   }
   function playNextNow() {
     cancelAutoplay();
     nextEp();
   }
   function _scheduleAutoplay() {
-    var _a, _b, _c;
     if (!seriesContext) return;
-    const { episodes, index } = seriesContext;
-    if (index >= episodes.length - 1) return;
-    if (!((_a = $("autoplay-check")) == null ? void 0 : _a.checked)) return;
-    const nextEp2 = episodes[index + 1];
-    const nextNum = (_c = (_b = nextEp2 == null ? void 0 : nextEp2.number) != null ? _b : nextEp2 == null ? void 0 : nextEp2.episode) != null ? _c : index + 2;
-    const nextTitle = `Episodio ${nextNum}${(nextEp2 == null ? void 0 : nextEp2.title) ? " \u2014 " + nextEp2.title : ""}`;
+    var ctx = seriesContext;
+    if (ctx.index >= ctx.episodes.length - 1) return;
+    var check = $("autoplay-check");
+    if (check && !check.checked) return;
+    var nextEp2 = ctx.episodes[ctx.index + 1];
+    var nextNum = nextEp2 && (nextEp2.number || nextEp2.episode) || ctx.index + 2;
+    var nextTitle = "Episodio " + nextNum + (nextEp2 && nextEp2.title ? " — " + nextEp2.title : "");
     $("p-autoplay-ep-title").textContent = nextTitle;
     $("p-autoplay-next").style.display = "block";
-    const bar = $("p-autoplay-progress");
+    var bar = $("p-autoplay-progress");
     bar.style.transition = "none";
     bar.style.width = "100%";
-    requestAnimationFrame(() => {
-      bar.style.transition = `width ${AUTOPLAY_DELAY}s linear`;
+    requestAnimationFrame(function() {
+      bar.style.transition = "width " + AUTOPLAY_DELAY + "s linear";
       bar.style.width = "0%";
     });
     clearTimeout(autoplayTimer);
-    autoplayTimer = setTimeout(() => {
+    autoplayTimer = setTimeout(function() {
       $("p-autoplay-next").style.display = "none";
-      nextEp2();
+      nextEp();
     }, AUTOPLAY_DELAY * 1e3);
   }
   function cancelAutoplay() {
     clearTimeout(autoplayTimer);
     autoplayTimer = null;
-    const el = $("p-autoplay-next");
+    var el = $("p-autoplay-next");
     if (el) el.style.display = "none";
   }
   function _prepareUI(title, epLabel) {
+    var wasOpen = $("player").classList.contains("open");
     $("player").classList.add("open");
-    $("p-title-el").textContent = title || "";
+    if (!wasOpen && window.Navigation && !window.location.pathname.includes('watch.html')) {
+      Navigation.recordOverlay("player");
+    }
+    $("p-title-el").textContent = title || "Reproduciendo...";
     $("p-ep-label").textContent = epLabel || "";
     $("p-loading").classList.remove("hidden");
     $("p-loading-title").textContent = "Conectando...";
-    $("p-play-btn").textContent = "\u23F8";
+    $("p-play-btn").textContent = "⏸";
     $("p-fill").style.width = "0%";
     $("p-time").textContent = "0:00 / 0:00";
     $("p-servers").innerHTML = "";
@@ -180,14 +209,16 @@ const Player = /* @__PURE__ */ (() => {
       hlsInstance.destroy();
       hlsInstance = null;
     }
-    vid().src = "";
-    vid().autoplay = true;
-    vid().muted = true;
-    vid().defaultMuted = true;
-    vid().onloadedmetadata = null;
-    ifr().src = "";
-    ifr().style.display = "none";
-    vid().style.display = "block";
+    var v = vid();
+    v.src = "";
+    v.autoplay = true;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.onloadedmetadata = null;
+    var i = ifr();
+    i.src = "";
+    i.style.display = "none";
+    v.style.display = "block";
   }
   function _showEpNav(show) {
     $("p-prev-ep").style.display = show ? "flex" : "none";
@@ -196,20 +227,24 @@ const Player = /* @__PURE__ */ (() => {
   }
   function _updateEpNavButtons() {
     if (!seriesContext) return;
-    const { index, episodes } = seriesContext;
-    $("p-prev-ep").style.opacity = index > 0 ? "1" : "0.3";
-    $("p-next-ep").style.opacity = index < episodes.length - 1 ? "1" : "0.3";
+    var ctx = seriesContext;
+    $("p-prev-ep").style.opacity = ctx.index > 0 ? "1" : "0.3";
+    $("p-next-ep").style.opacity = ctx.index < ctx.episodes.length - 1 ? "1" : "0.3";
   }
   function _loadLive(item) {
-    const hlsUrl = item.sources.find((s) => s.includes(".m3u8")) || item.sources[0];
+    if (!item.sources || !item.sources.length) {
+      _noStream("No hay fuentes para este canal.");
+      return;
+    }
+    var hlsUrl = item.sources.find(function(s) { return s.indexOf(".m3u8") >= 0; }) || item.sources[0];
     if (item.sources.length > 1) {
-      const srv = $("p-servers");
-      item.sources.forEach((s, i) => {
-        const b = document.createElement("div");
+      var srv = $("p-servers");
+      item.sources.forEach(function(s, i) {
+        var b = document.createElement("div");
         b.className = "p-srv-btn" + (i === 0 ? " active" : "");
         b.textContent = "HLS " + (i + 1);
-        b.onclick = () => {
-          srv.querySelectorAll(".p-srv-btn").forEach((x) => x.classList.remove("active"));
+        b.onclick = function() {
+          srv.querySelectorAll(".p-srv-btn").forEach(function(x) { x.classList.remove("active"); });
           b.classList.add("active");
           _loadStream(s, true);
         };
@@ -220,68 +255,85 @@ const Player = /* @__PURE__ */ (() => {
   }
   function _resolveAndPlay(item) {
     return __async(this, null, function* () {
-      let embedUrl = item.embedUrl || "";
-      let servers = [];
-      if (!embedUrl && item.postId) {
-        _log("Obteniendo fuentes de la API...");
-        const data = yield Api.fetchPlayer(item.postId);
-        if (!data) {
-          _noStream("API no respondi\xF3");
-          return;
-        }
-        embedUrl = Api.extractEmbed(data);
-        _log("Embed encontrado: " + (embedUrl ? embedUrl.slice(0, 60) + "..." : "NINGUNO"), embedUrl ? "#46d369" : "#f55");
-        servers = Api.extractPlayerSources(data);
-        // Prioritize server index 1 (server 2) when available — many sources here provide a faster HLS server
-        try {
-          if (Array.isArray(servers) && servers.length > 1) {
-            const preferred = servers.splice(1, 1)[0];
-            if (preferred) servers.unshift(preferred);
-            _log("Priorizando servidor 2 como predeterminado", "#46d369");
-          }
-        } catch (e) {}
-        _buildServerButtons(servers, (url) => _tryEmbed(url));
-      }
-      const candidateUrls = [];
-      // Prefer server-provided URLs first (after reordering above), then fall back to raw embedUrl
-      servers.forEach((s) => {
-        const url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || "";
-        if (url && !candidateUrls.includes(url)) candidateUrls.push(url);
-      });
-      if (embedUrl && !candidateUrls.includes(embedUrl)) candidateUrls.push(embedUrl);
-      if (!candidateUrls.length) {
-        _noStream("No se encontr\xF3 URL de embed");
+      var embedUrl = item.embedUrl || "";
+      var servers = item._servers || [];
+      if (item.isLive && item.sources && item.sources.length) {
+        _loadLive(item);
         return;
       }
-      for (let i = 0; i < candidateUrls.length; i++) {
-        const url = candidateUrls[i];
-        const tryingMsg = candidateUrls.length > 1 ? `Probando servidor ${i + 1}/${candidateUrls.length}...` : "Probando servidor...";
+      if ((!embedUrl || !servers.length) && item.postId) {
+        _log("Obteniendo fuentes de la API...");
+        var data = yield Api.fetchPlayer(item.postId);
+        if (!data) {
+          if (!embedUrl) {
+            _noStream("API no respondió");
+            return;
+          }
+        } else {
+          if (!embedUrl) embedUrl = Api.extractEmbed(data);
+          servers = Api.extractPlayerSources(data);
+          item._servers = servers;
+          _log("Fuentes obtenidas: " + servers.length, "#46d369");
+        }
+      }
+      if (servers.length) {
+        _buildServerButtons(servers, function(url) { return _tryEmbed(url); });
+      }
+      var candidateUrls = [];
+      servers.forEach(function(s) {
+        var url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || "";
+        if (url && candidateUrls.indexOf(url) < 0) candidateUrls.push(url);
+      });
+      if (embedUrl && candidateUrls.indexOf(embedUrl) < 0) candidateUrls.push(embedUrl);
+      candidateUrls.sort(function(a, b) { return _playbackUrlScore(a) - _playbackUrlScore(b); });
+      playbackCandidates = candidateUrls.slice();
+      playbackCandidateIndex = -1;
+      if (!candidateUrls.length) {
+        _noStream("No se encontró URL de embed");
+        return;
+      }
+      _log("Buscando stream directo para autoplay...", "#f5c518");
+      for (var i = 0; i < candidateUrls.length; i++) {
+        var url = candidateUrls[i];
+        var tryingMsg = candidateUrls.length > 1 ? "Probando servidor " + (i + 1) + "/" + candidateUrls.length + "..." : "Probando servidor...";
         _log(tryingMsg, "#f5c518");
-        const ok = yield _tryEmbed(url, false);
+        var ok = yield _tryEmbed(url, false, i, { allowIframe: false });
         if (ok) return;
       }
-      _noStream("Ning\xFAn servidor compatible con reproducci\xF3n directa.");
+      if (ALLOW_IFRAME_FALLBACK) {
+        _log("Sin HLS directo; usando reproductor externo como ultimo recurso", "#f5c518");
+        for (var j = 0; j < candidateUrls.length; j++) {
+          var ok2 = yield _tryEmbed(candidateUrls[j], false, j, { allowIframe: true });
+          if (ok2) return;
+        }
+      }
+      _noStream("Ningún servidor compatible con reproducción directa.");
     });
   }
-  function _tryEmbed(embedUrl, showErrorOnFail = true) {
+  function _tryEmbed(embedUrl, showErrorOnFail, candidateIndex, options) {
+    if (showErrorOnFail === undefined) showErrorOnFail = true;
+    if (candidateIndex === undefined) candidateIndex = -1;
+    if (!options) options = {};
     return __async(this, null, function* () {
+      var allowIframe = options.allowIframe !== false;
+      if (candidateIndex >= 0) playbackCandidateIndex = candidateIndex;
       _log("Extrayendo stream de: " + embedUrl.slice(0, 60) + "...");
       if (/\.m3u8(?:\?|#|$)/i.test(embedUrl)) {
-        _log("Stream HLS directo encontrado \u2713", "#46d369");
+        _log("Stream HLS directo encontrado ✓", "#46d369");
         ifr().style.display = "none";
         vid().style.display = "block";
         _loadStream(embedUrl, false);
         return true;
       }
-      const m3u8 = yield Api.extractM3u8(embedUrl);
+      var m3u8 = yield Api.extractM3u8(embedUrl);
       if (m3u8) {
-        _log("Stream HLS encontrado \u2713", "#46d369");
+        _log("Stream HLS encontrado ✓", "#46d369");
         ifr().style.display = "none";
         vid().style.display = "block";
         _loadStream(m3u8, false);
         return true;
       } else {
-        if (!ALLOW_IFRAME_FALLBACK) {
+        if (!ALLOW_IFRAME_FALLBACK || !allowIframe) {
           _log("Servidor no compatible: no se pudo extraer stream directo", "#f55");
           if (showErrorOnFail) {
             _noStream("Este servidor usa iframe externo bloqueado por CORS/ads. Prueba otro servidor.");
@@ -292,38 +344,58 @@ const Player = /* @__PURE__ */ (() => {
         ifr().src = _withAutoplayParams(embedUrl);
         ifr().style.display = "block";
         vid().style.display = "none";
-        setTimeout(() => $("p-loading").classList.add("hidden"), 3e3);
+        setTimeout(function() { var l = $("p-loading"); if (l) l.classList.add("hidden"); }, 3e3);
         return true;
       }
     });
   }
+  function _fallbackToNextCandidate(reason) {
+    if (!reason) reason = "";
+    if (playbackRetrying) return false;
+    var nextIndex = playbackCandidateIndex + 1;
+    if (!playbackCandidates.length || nextIndex >= playbackCandidates.length) {
+      return false;
+    }
+    var nextUrl = playbackCandidates[nextIndex];
+    playbackRetrying = true;
+    _log("Fallback al servidor " + (nextIndex + 1) + "/" + playbackCandidates.length + (reason ? " tras " + reason : ""), "#f5c518");
+    if (hlsInstance) {
+      hlsInstance.destroy();
+      hlsInstance = null;
+    }
+    setTimeout(function() {
+      playbackRetrying = false;
+      _tryEmbed(nextUrl, true, nextIndex);
+    }, 0);
+    return true;
+  }
   function _withAutoplayParams(url) {
     if (!url) return "";
     try {
-      const u = new URL(url, window.location.href);
+      var u = new URL(url, window.location.href);
       u.searchParams.set("autoplay", "1");
       u.searchParams.set("mute", "1");
       u.searchParams.set("muted", "1");
       u.searchParams.set("playsinline", "1");
       return u.toString();
     } catch (_) {
-      const sep = url.includes("?") ? "&" : "?";
-      return `${url}${sep}autoplay=1&mute=1&muted=1&playsinline=1`;
+      var sep = url.indexOf("?") >= 0 ? "&" : "?";
+      return url + sep + "autoplay=1&mute=1&muted=1&playsinline=1";
     }
   }
   function _buildServerButtons(servers, onPick) {
     if (!servers.length) return;
-    const srv = $("p-servers");
-    servers.forEach((s, i) => {
-      const url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || "";
+    var srv = $("p-servers");
+    servers.forEach(function(s, i) {
+      var url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || "";
       if (!url) return;
-      const b = document.createElement("div");
+      var b = document.createElement("div");
       b.className = "p-srv-btn" + (i === 0 ? " active" : "");
       b.tabIndex = 0;
       b.setAttribute("role", "button");
       b.textContent = s.name || s.server || s.label || "Srv " + (i + 1);
-      b.onclick = () => {
-        srv.querySelectorAll(".p-srv-btn").forEach((x) => x.classList.remove("active"));
+      b.onclick = function() {
+        srv.querySelectorAll(".p-srv-btn").forEach(function(x) { x.classList.remove("active"); });
         b.classList.add("active");
         $("p-loading").classList.remove("hidden");
         onPick(url);
@@ -331,100 +403,110 @@ const Player = /* @__PURE__ */ (() => {
       srv.appendChild(b);
     });
   }
-  function _updateVolumeIcon(v = vid()) {
+  function _updateVolumeIcon(v) {
+    if (!v) v = vid();
     if (!v) return;
-    $("p-vol-icon").textContent = v.muted || v.volume === 0 ? "\u{1F507}" : "\u{1F50A}";
+    $("p-vol-icon").textContent = v.muted || v.volume === 0 ? "🔇" : "🔊";
   }
   function _attemptAutoUnmute(v) {
     if (!v) return;
-    setTimeout(() => {
+    setTimeout(function() {
       if (v.paused) return;
       v.muted = false;
       v.defaultMuted = false;
-      const p = v.play();
+      var p = v.play();
       if (p && typeof p.catch === "function") {
-        p.catch(() => {
+        p.catch(function() {
           v.muted = true;
           v.defaultMuted = true;
           _log("Autoplay con sonido bloqueado por el navegador", "#f5c518");
-        }).finally(() => _updateVolumeIcon(v));
+        }).finally(function() { return _updateVolumeIcon(v); });
       } else {
         _updateVolumeIcon(v);
       }
     }, 280);
   }
-  function _playWithAutoplayFallback(v, context = "") {
+  function _playWithAutoplayFallback(v, context) {
     if (!v) return Promise.resolve();
     v.autoplay = true;
     v.muted = true;
     v.defaultMuted = true;
-    const startPlayback = () => v.play().then(() => {
-      _attemptAutoUnmute(v);
-    }).catch((err) => {
-      console.warn("[Player] autoplay blocked", context, err);
-      return new Promise((resolve, reject) => {
-        const retry = () => {
-          v.removeEventListener("canplay", retry);
-          v.removeEventListener("loadedmetadata", retry);
-          v.play().then(() => {
-            _log("Reproducci\xF3n autom\xE1tica activada", "#46d369");
-            _attemptAutoUnmute(v);
-            resolve();
-          }).catch((err2) => {
-            console.warn("[Player] autoplay retry failed", context, err2);
-            reject(err2);
-          });
-        };
-        if (v.readyState >= 2) {
-          retry();
-        } else {
-          v.addEventListener("canplay", retry, { once: true });
-          v.addEventListener("loadedmetadata", retry, { once: true });
-        }
-      }).catch((err2) => {
-        console.warn("[Player] muted autoplay fallback failed", context, err2);
-        throw err2;
+    var startPlayback = function() {
+      return v.play().then(function() {
+        _attemptAutoUnmute(v);
+      }).catch(function(err) {
+        console.warn("[Player] autoplay blocked", context, err);
+        return new Promise(function(resolve, reject) {
+          var retry = function() {
+            v.removeEventListener("canplay", retry);
+            v.removeEventListener("loadedmetadata", retry);
+            v.play().then(function() {
+              _log("Reproducción automática activada", "#46d369");
+              _attemptAutoUnmute(v);
+              resolve();
+            }).catch(function(err2) {
+              console.warn("[Player] autoplay retry failed", context, err2);
+              reject(err2);
+            });
+          };
+          if (v.readyState >= 2) {
+            retry();
+          } else {
+            v.addEventListener("canplay", retry, { once: true });
+            v.addEventListener("loadedmetadata", retry, { once: true });
+          }
+        }).catch(function(err2) {
+          console.warn("[Player] muted autoplay fallback failed", context, err2);
+          throw err2;
+        });
       });
-    });
+    };
     return startPlayback();
   }
   function _loadStream(url, isLive) {
-    const v = vid();
+    var v = vid();
     $("p-loading").classList.remove("hidden");
     if (hlsInstance) {
       hlsInstance.destroy();
       hlsInstance = null;
     }
     v.autoplay = true;
-    if (url.includes(".m3u8") && Hls.isSupported()) {
+    var isM3u8 = url.indexOf(".m3u8") >= 0;
+    var canNativeHls = !!(v.canPlayType("application/vnd.apple.mpegURL") || v.canPlayType("application/x-mpegURL"));
+    var preferNativeHls = isM3u8 && canNativeHls && IS_WEBOS;
+    if (isM3u8 && typeof Hls !== "undefined" && Hls.isSupported() && !preferNativeHls) {
       hlsInstance = new Hls({
         enableWorker: true,
         lowLatencyMode: isLive,
         backBufferLength: isLive ? 0 : 30,
-        xhrSetup: (xhr) => {
+        xhrSetup: function(xhr) {
           xhr.withCredentials = false;
         }
       });
-      hlsInstance.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => {
+      hlsInstance.on(Hls.Events.AUDIO_TRACKS_UPDATED, function() {
         _preferSpanishAudioHls();
       });
       hlsInstance.loadSource(url);
       hlsInstance.attachMedia(v);
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+      hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
         _preferSpanishAudioHls();
         v.muted = true;
         v.defaultMuted = true;
         _playWithAutoplayFallback(v, "hls-manifest");
         $("p-loading").classList.add("hidden");
-        $("p-play-btn").textContent = "\u23F8";
+        $("p-play-btn").textContent = "⏸";
       });
-      hlsInstance.on(Hls.Events.ERROR, (e, d) => {
+      hlsInstance.on(Hls.Events.ERROR, function(e, d) {
         console.error("[HLS error]", d);
-        if (d.fatal) _noStream("Error HLS: " + d.type);
+        if (d.fatal) {
+          var isNetwork = d.type === Hls.ErrorTypes.NETWORK_ERROR || d.details === Hls.ErrorDetails.FRAG_LOAD_ERROR || d.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR;
+          if (isNetwork && _fallbackToNextCandidate("error de red HLS")) return;
+          _noStream("Error HLS: " + d.type);
+        }
       });
-    } else if (v.canPlayType("application/x-mpegURL")) {
+    } else if (canNativeHls) {
       v.src = url;
-      v.onloadedmetadata = () => {
+      v.onloadedmetadata = function() {
         _preferSpanishAudioNative();
       };
       v.muted = true;
@@ -433,122 +515,128 @@ const Player = /* @__PURE__ */ (() => {
       $("p-loading").classList.add("hidden");
     } else {
       v.src = url;
-      v.onloadedmetadata = () => {
+      v.onloadedmetadata = function() {
         _preferSpanishAudioNative();
       };
       v.muted = true;
       v.defaultMuted = true;
       _playWithAutoplayFallback(v, "direct-file");
-      v.oncanplay = () => $("p-loading").classList.add("hidden");
+      v.oncanplay = function() { return $("p-loading").classList.add("hidden"); };
     }
     v.ontimeupdate = _updateProgress;
     v.onended = _onEnded;
   }
   function _onEnded() {
-    $("p-play-btn").textContent = "\u25B6";
+    $("p-play-btn").textContent = "▶";
     if (seriesContext) _scheduleAutoplay();
   }
   function _updateProgress() {
-    const v = vid();
+    var v = vid();
     if (!v || !v.duration || isNaN(v.duration)) return;
-    const pct = (v.currentTime / v.duration * 100).toFixed(2);
+    var pct = (v.currentTime / v.duration * 100).toFixed(2);
     $("p-fill").style.width = pct + "%";
     $("p-time").textContent = UI.fmt(v.currentTime) + " / " + UI.fmt(v.duration);
     if (seriesContext && !autoplayTimer && parseFloat(pct) >= 95) _scheduleAutoplay();
   }
-  function _noStream(reason = "") {
+  function _noStream(reason) {
+    if (!reason) reason = "";
     $("p-loading").classList.add("hidden");
-    UI.toast("\u26A0 " + (reason || "Stream no disponible. Prueba otro servidor."));
+    UI.toast("⚠ " + (reason || "Stream no disponible. Prueba otro servidor."));
     console.error("[Player] no stream:", reason);
   }
-  function close() {
+  function close(options) {
+    if (!options) options = {};
     cancelAutoplay();
     if (hlsInstance) {
       hlsInstance.destroy();
       hlsInstance = null;
     }
-    vid().pause();
-    vid().src = "";
-    ifr().src = "";
-    ifr().style.display = "none";
-    vid().style.display = "block";
+    var v = vid();
+    v.pause();
+    v.src = "";
+    var i = ifr();
+    i.src = "";
+    i.style.display = "none";
+    v.style.display = "block";
     $("player").classList.remove("open");
     seriesContext = null;
+    if (!options.skipHistory && window.Navigation) Navigation.closeOverlayHistorySafe();
   }
   function togglePlay() {
-    const v = vid();
-    // If iframe player is visible, don't attempt to control <video>
-    if (ifr() && ifr().style.display === "block") {
+    var v = vid();
+    var i = ifr();
+    if (i && i.style.display === "block") {
       UI.toast("Reproductor externo activo; usa sus controles.");
       return;
     }
-    // Ensure there is a source available before trying to play
-    const hasSrc = v && (v.currentSrc || v.src);
+    var hasSrc = v && (v.currentSrc || v.src);
     if (!hasSrc) {
       UI.toast("No hay fuentes disponibles para reproducir.");
       return;
     }
     if (v.paused) {
-      const p = v.play();
+      var p = v.play();
       if (p && typeof p.catch === "function") {
-        p.then(() => {
-          $("p-play-btn").textContent = "\u23F8";
-        }).catch((err) => {
-          console.warn('[Player] play failed', err);
-          UI.toast('No se pudo iniciar la reproducción.');
-          $("p-play-btn").textContent = "\u25B6";
+        p.then(function() {
+          $("p-play-btn").textContent = "⏸";
+        }).catch(function(err) {
+          console.warn("[Player] play failed", err);
+          UI.toast("No se pudo iniciar la reproducción.");
+          $("p-play-btn").textContent = "▶";
         });
       } else {
-        $("p-play-btn").textContent = "\u23F8";
+        $("p-play-btn").textContent = "⏸";
       }
     } else {
       v.pause();
-      $("p-play-btn").textContent = "\u25B6";
+      $("p-play-btn").textContent = "▶";
     }
   }
   function skip(s) {
-    const v = vid();
+    var v = vid();
     if (v) v.currentTime += s;
   }
   function setVol(val) {
-    const v = vid();
+    var v = vid();
     if (v) {
       v.volume = parseFloat(val);
-      $("p-vol-icon").textContent = val > 0 ? "\u{1F50A}" : "\u{1F507}";
+      $("p-vol-icon").textContent = val > 0 ? "🔊" : "🔇";
     }
   }
   function toggleMute() {
-    const v = vid();
+    var v = vid();
     if (v) {
       v.muted = !v.muted;
-      $("p-vol-icon").textContent = v.muted ? "\u{1F507}" : "\u{1F50A}";
+      $("p-vol-icon").textContent = v.muted ? "🔇" : "🔊";
     }
   }
   function toggleFS() {
-    const p = $("player");
-    if (!document.fullscreenElement) p.requestFullscreen().catch(() => {
-    });
-    else document.exitFullscreen();
+    var p = $("player");
+    if (!document.fullscreenElement) {
+      p.requestFullscreen().catch(function() { });
+    } else {
+      document.exitFullscreen();
+    }
   }
   function seek(e) {
-    const v = vid();
+    var v = vid();
     if (!v || !v.duration) return;
-    const r = $("p-progress").getBoundingClientRect();
+    var r = $("p-progress").getBoundingClientRect();
     v.currentTime = (e.clientX - r.left) / r.width * v.duration;
   }
   return {
-    open,
-    openEpisode,
-    close,
-    togglePlay,
-    skip,
-    setVol,
-    toggleMute,
-    toggleFS,
-    seek,
-    prevEp,
-    nextEp,
-    playNextNow,
-    cancelAutoplay
+    open: open,
+    openEpisode: openEpisode,
+    close: close,
+    togglePlay: togglePlay,
+    skip: skip,
+    setVol: setVol,
+    toggleMute: toggleMute,
+    toggleFS: toggleFS,
+    seek: seek,
+    prevEp: prevEp,
+    nextEp: nextEp,
+    playNextNow: playNextNow,
+    cancelAutoplay: cancelAutoplay
   };
 })();
