@@ -236,33 +236,66 @@ var Player = (function() {
       _noStream("No hay fuentes para este canal.");
       return;
     }
-    var hlsUrl = item.sources.find(function(s) { return s.indexOf(".m3u8") >= 0; }) || item.sources[0];
+    var hlsUrl = item.sources[0];
+    for (var i = 0; i < item.sources.length; i++) {
+      if (item.sources[i].indexOf(".m3u8") >= 0) {
+        hlsUrl = item.sources[i];
+        break;
+      }
+    }
     if (item.sources.length > 1) {
       var srv = $("p-servers");
-      item.sources.forEach(function(s, i) {
-        var b = document.createElement("div");
-        b.className = "p-srv-btn" + (i === 0 ? " active" : "");
-        b.textContent = "HLS " + (i + 1);
-        b.onclick = function() {
-          srv.querySelectorAll(".p-srv-btn").forEach(function(x) { x.classList.remove("active"); });
-          b.classList.add("active");
-          _loadStream(s, true);
-        };
-        srv.appendChild(b);
-      });
+      srv.innerHTML = "";
+      for (var j = 0; j < item.sources.length; j++) {
+        (function(idx) {
+          var s = item.sources[idx];
+          var b = document.createElement("div");
+          b.className = "p-srv-btn" + (idx === 0 ? " active" : "");
+          b.tabIndex = 0;
+          b.setAttribute("role", "button");
+          b.textContent = "HLS " + (idx + 1);
+          b.onclick = function() {
+            srv.querySelectorAll(".p-srv-btn").forEach(function(x) { x.classList.remove("active"); });
+            b.classList.add("active");
+            _loadStream(s, true);
+          };
+          srv.appendChild(b);
+        })(j);
+      }
     }
     _loadStream(hlsUrl, true);
   }
   function _resolveAndPlay(item) {
     return __async(this, null, function* () {
+      _log("Buscando fuentes...");
       var embedUrl = item.embedUrl || "";
       var servers = item._servers || [];
+      
+      // Manejo especial para fútbol
+      if (item.type === 'football' || (item.url && item.url.indexOf('futbol-libre') >= 0)) {
+        _log("Resolviendo evento deportivo...");
+        var res = yield Api.resolveFootballSource(item.url || embedUrl);
+        if (res) {
+          if (res.type === 'hls') {
+            _log("Stream deportivo encontrado ✓", "#46d369");
+            _loadStream(res.stream, true);
+            return;
+          } else if (res.type === 'iframe') {
+            _log("Usando reproductor externo deportivo", "#f5c518");
+            ifr().src = _withAutoplayParams(res.stream);
+            ifr().style.display = "block";
+            vid().style.display = "none";
+            setTimeout(function() { var l = $("p-loading"); if (l) l.classList.add("hidden"); }, 3e3);
+            return;
+          }
+        }
+      }
+
       if (item.isLive && item.sources && item.sources.length) {
-        _loadLive(item);
+        _loadStream(item.sources[0], true);
         return;
       }
       if ((!embedUrl || !servers.length) && item.postId) {
-        _log("Obteniendo fuentes de la API...");
         var data = yield Api.fetchPlayer(item.postId);
         if (!data) {
           if (!embedUrl) {
@@ -280,10 +313,11 @@ var Player = (function() {
         _buildServerButtons(servers, function(url) { return _tryEmbed(url); });
       }
       var candidateUrls = [];
-      servers.forEach(function(s) {
+      for (var k = 0; k < servers.length; k++) {
+        var s = servers[k];
         var url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || "";
         if (url && candidateUrls.indexOf(url) < 0) candidateUrls.push(url);
-      });
+      }
       if (embedUrl && candidateUrls.indexOf(embedUrl) < 0) candidateUrls.push(embedUrl);
       candidateUrls.sort(function(a, b) { return _playbackUrlScore(a) - _playbackUrlScore(b); });
       playbackCandidates = candidateUrls.slice();
@@ -384,24 +418,28 @@ var Player = (function() {
     }
   }
   function _buildServerButtons(servers, onPick) {
-    if (!servers.length) return;
+    if (!servers || !servers.length) return;
     var srv = $("p-servers");
-    servers.forEach(function(s, i) {
-      var url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || "";
-      if (!url) return;
-      var b = document.createElement("div");
-      b.className = "p-srv-btn" + (i === 0 ? " active" : "");
-      b.tabIndex = 0;
-      b.setAttribute("role", "button");
-      b.textContent = s.name || s.server || s.label || "Srv " + (i + 1);
-      b.onclick = function() {
-        srv.querySelectorAll(".p-srv-btn").forEach(function(x) { x.classList.remove("active"); });
-        b.classList.add("active");
-        $("p-loading").classList.remove("hidden");
-        onPick(url);
-      };
-      srv.appendChild(b);
-    });
+    srv.innerHTML = "";
+    for (var i = 0; i < servers.length; i++) {
+      (function(idx) {
+        var s = servers[idx];
+        var url = s.url || s.embed || s.embed_url || s.iframe || s.file || s.link || "";
+        if (!url) return;
+        var b = document.createElement("div");
+        b.className = "p-srv-btn" + (idx === 0 ? " active" : "");
+        b.tabIndex = 0;
+        b.setAttribute("role", "button");
+        b.textContent = s.name || s.server || s.label || "Srv " + (idx + 1);
+        b.onclick = function() {
+          srv.querySelectorAll(".p-srv-btn").forEach(function(x) { x.classList.remove("active"); });
+          b.classList.add("active");
+          $("p-loading").classList.remove("hidden");
+          onPick(url);
+        };
+        srv.appendChild(b);
+      })(i);
+    }
   }
   function _updateVolumeIcon(v) {
     if (!v) v = vid();

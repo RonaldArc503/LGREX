@@ -157,17 +157,24 @@ var Football = (function() {
 
   function _playChannel(url, channelName, matchTitle) {
     var item = {
+      id: 'fb-' + Math.random().toString(36).substr(2, 9),
+      postId: null,
       title: matchTitle || channelName,
-      embedUrl: url,
+      type: 'football',
       isLive: true,
-      sources: [url],
-      postId: null
+      url: url, // La URL original (con Base64 si existe)
+      sources: [url]
     };
-    if (window.Player && typeof Player.open === 'function') {
-      Player.open(item);
-    } else {
-      window.open(url, '_blank', 'noopener');
-    }
+
+    // Usamos watch.html para reproducir cualquier contenido, incluyendo fútbol
+    var watchUrl = 'watch.html?id=' + item.id + 
+                   '&type=football' + 
+                   '&title=' + encodeURIComponent(item.title) + 
+                   '&url=' + encodeURIComponent(url) +
+                   '&isLive=true';
+    
+    console.log("[Football] Navigating to player:", watchUrl);
+    window.location.href = watchUrl;
   }
 
   function _buildStyle() {

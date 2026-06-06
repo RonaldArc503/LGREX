@@ -332,6 +332,15 @@ var DetailPage = (function() {
     // Datos iniciales básicos
     _item = { id: postId, postId: postId, title: title, type: type, isLive: isLive };
 
+    // Intentar recuperar de Store para tener el poster/backdrop de inmediato
+    var stored = window.Store ? Store.get(postId) : null;
+    if (stored) {
+      if (stored.poster) _item.poster = stored.poster;
+      if (stored.backdrop) _item.backdrop = stored.backdrop;
+      if (stored.desc && !_item.desc) _item.desc = stored.desc;
+    }
+    _fillUI(_item);
+
     // Intentar obtener metadatos completos
     Api.fetchPlayer(postId).then(function(raw) {
       if (raw) {
@@ -365,7 +374,12 @@ var DetailPage = (function() {
   function _enrichWithTMDB(postId, type, title) {
     // 1. Buscar en TMDB para completar lo que falte (sinopsis real, rating, reparto, etc)
     var mediaType = type === 'tvshows' || type === 'anime' ? 'tv' : 'movie';
-    var url = TMDB_API_BASE + '/search/' + mediaType + '?api_key=' + TMDB_API_KEY + '&query=' + encodeURIComponent(title) + '&language=es-ES';
+    
+    // Limpiar título para búsqueda (quitar años entre paréntesis)
+    var cleanTitle = title.replace(/\(\d{4}\)/g, '').trim();
+    var url = TMDB_API_BASE + '/search/' + mediaType + '?api_key=' + TMDB_API_KEY + '&query=' + encodeURIComponent(cleanTitle) + '&language=es-ES';
+    
+    console.log("[Detail] Searching TMDB for:", cleanTitle);
     
     Api.proxiedFetch(url)
       .then(function(r){ return r.json(); })
@@ -375,11 +389,12 @@ var DetailPage = (function() {
           var match = candidates[0];
           return Api.proxiedFetch(TMDB_API_BASE + '/' + mediaType + '/' + match.id + '?api_key=' + TMDB_API_KEY + '&language=es-ES&append_to_response=credits');
         }
-        throw new Error("No TMDB match");
+        throw new Error("No TMDB match for: " + cleanTitle);
       })
       .then(function(r){ return r.json(); })
       .then(function(details){
         if (details) {
+          console.log("[Detail] TMDB data found:", details.title || details.name);
           _item.title = details.title || details.name || _item.title;
           _item.originalTitle = details.original_title || details.original_name || _item.originalTitle;
           _item.desc = details.overview || _item.desc;
@@ -403,7 +418,26 @@ var DetailPage = (function() {
       })
       .catch(function(e) {
         console.warn("Error enriqueciendo con TMDB:", e);
+        // Fallback: si no hay poster aún, intentar búsqueda genérica multi
+        if (!_item.poster) {
+          _tryMultiSearch(cleanTitle);
+        }
       });
+  }
+
+  function _tryMultiSearch(title) {
+    var url = TMDB_API_BASE + '/search/multi?api_key=' + TMDB_API_KEY + '&query=' + encodeURIComponent(title) + '&language=es-ES';
+    Api.proxiedFetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var match = (d.results || [])[0];
+        if (match) {
+          if (match.backdrop_path) _item.backdrop = TMDB_BACK + match.backdrop_path;
+          if (match.poster_path) _item.poster = TMDB_IMG + match.poster_path;
+          if (match.overview) _item.desc = match.overview;
+          _fillUI(_item);
+        }
+      }).catch(function(){});
   }
 
   function _fillUI(item) {
@@ -422,17 +456,22 @@ var DetailPage = (function() {
     if (poster) _el('dc-poster-side').src = poster;
 
     var tagsEl = _el('dc-tags');
-    tagsEl.innerHTML = '';
-    var tags = item.tags || [];
-    for (var i = 0; i < Math.min(tags.length, 5); i++) {
-      var s = document.createElement('span');
-      s.className = 'dc-tag';
-      s.style.cssText = 'background:rgba(255,255,255,0.1); padding:5px 12px; border-radius:4px; font-size:14px;';
-      s.textContent = tags[i];
-      tagsEl.appendChild(s);
+    if (tagsEl) {
+      tagsEl.innerHTML = '';
+      var tags = item.tags || [];
+      for (var i = 0; i < Math.min(tags.length, 5); i++) {
+        var s = document.createElement('span');
+        s.className = 'dc-tag';
+        s.style.cssText = 'background:rgba(255,255,255,0.1); padding:5px 12px; border-radius:4px; font-size:14px;';
+        s.textContent = tags[i];
+        tagsEl.appendChild(s);
+      }
     }
 
     document.title = (item.title || 'Detalle') + ' — REX TV';
+    
+    // Re-check focus after UI update
+    if (window.TVFocus) TVFocus.ensureContextFocus();
   }
 
   function _loadEps() {
@@ -515,6 +554,19 @@ var DetailPage = (function() {
   }
 
   function play() {
+    if (_item.type === 'tvshows' || _item.type === 'anime') {
+      if (_seasonsMap && _seasonsMap.size > 0) {
+        var seasonNums = [];
+        _seasonsMap.forEach(function(val, key) { seasonNums.push(key); });
+        seasonNums.sort(function(a, b){ return a - b; });
+        var firstSeason = seasonNums[0];
+        var eps = _seasonsMap.get(firstSeason) || [];
+        if (eps.length > 0) {
+          _playEpisode(eps, 0);
+          return;
+        }
+      }
+    }
     var url = 'watch.html?id=' + _item.postId + '&type=' + _item.type + '&title=' + encodeURIComponent(_item.title);
     if (_item.isLive) url += '&isLive=true';
     window.location.href = url;

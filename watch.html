@@ -123,17 +123,18 @@
     function start() {
       var postId = _getParam('id');
       var type = _getParam('type');
-      var isLive = type === 'channel' || _getParam('isLive') === 'true';
+      var isLive = type === 'channel' || type === 'football' || _getParam('isLive') === 'true';
       var title = _getParam('title') ? decodeURIComponent(_getParam('title')) : '';
       var season = _getParam('season') ? Number(_getParam('season')) : null;
       var episode = _getParam('episode') ? Number(_getParam('episode')) : null;
+      var url = _getParam('url') ? decodeURIComponent(_getParam('url')) : '';
 
-      if (!postId) {
+      if (!postId && !url) {
         history.back();
         return;
       }
 
-      var item = { id: postId, postId: postId, title: title, type: type, isLive: isLive };
+      var item = { id: postId, postId: postId, title: title, type: type, isLive: isLive, url: url };
 
       // Si es una serie y tenemos temporada/episodio, necesitamos cargar el contexto de episodios
       if ((type === 'tvshows' || type === 'anime') && season !== null) {

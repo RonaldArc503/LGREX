@@ -376,19 +376,19 @@ var Api = (function() {
     }
   }
   function unpackPackerScripts(html) {
-    const unpacked = [];
+    var unpacked = [];
     if (!html || typeof html !== "string") return unpacked;
-    const re = /eval\(function\(p,a,c,k,e,d\)\{[\s\S]*?\}\('([\s\S]*?)',(\d+),(\d+),'([\s\S]*?)'\.split\('\|'\)\)\)/g;
-    let match;
+    var re = /eval\(function\(p,a,c,k,e,d\)\{[\s\S]*?\}\('([\s\S]*?)',(\d+),(\d+),'([\s\S]*?)'\.split\('\|'\)\)\)/g;
+    var match;
     while ((match = re.exec(html))) {
-      let payload = decodePackedString(match[1]);
-      const radix = Number(match[2] || 36);
-      let count = Number(match[3] || 0);
-      const words = decodePackedString(match[4]).split("|");
+      var payload = decodePackedString(match[1]);
+      var radix = Number(match[2] || 36);
+      var count = Number(match[3] || 0);
+      var words = decodePackedString(match[4]).split("|");
       while (count--) {
-        const word = words[count];
+        var word = words[count];
         if (!word) continue;
-        const token = count.toString(radix);
+        var token = count.toString(radix);
         payload = payload.replace(new RegExp("\\b" + token + "\\b", "g"), word);
       }
       unpacked.push(payload);
@@ -397,7 +397,7 @@ var Api = (function() {
   }
   function findM3u8InText(text) {
     if (!text) return "";
-    let m = text.match(/https?:\/\/[^"' <>\n]+master\.m3u8[^"' <>\n]*/i);
+    var m = text.match(/https?:\/\/[^"' <>\n]+master\.m3u8[^"' <>\n]*/i);
     if (m) return cleanUrl(m[0]);
     m = text.match(/https?:\/\/[^"' <>\n]+\.m3u8[^"' <>\n]*/i);
     if (m) return cleanUrl(m[0]);
@@ -406,6 +406,60 @@ var Api = (function() {
     m = text.match(/file["']?\s*:\s*["'](https?:[^"']+)/i);
     if (m && m[1].includes("http")) return cleanUrl(m[1]);
     return "";
+  }
+  function findIframeInText(text) {
+    if (!text) return "";
+    var m = text.match(/<iframe[^>]+src=["'](https?:[^"']+)["']/i);
+    if (m) return cleanUrl(m[1]);
+    return "";
+  }
+  function resolveFootballSource(url) {
+    return __async(this, null, function* () {
+      try {
+        if (url.indexOf("r=") >= 0) {
+          var r = url.split("r=")[1].split("&")[0];
+          try {
+            url = atob(r);
+          } catch (e) {
+            console.warn("Base64 decode failed", e);
+          }
+        }
+        console.log("[Api] Resolving football source:", url);
+        var r1 = yield proxiedFetch(url);
+        var html = yield r1.text();
+        
+        var stream = findM3u8InText(html);
+        if (stream) return { stream: stream, type: 'hls' };
+        
+        var iframe = findIframeInText(html);
+        if (iframe) {
+          // Si encontramos un iframe, intentamos entrar recursivamente una vez
+          console.log("[Api] Found iframe in football source, following:", iframe);
+          var r2 = yield proxiedFetch(iframe);
+          var html2 = yield r2.text();
+          var stream2 = findM3u8InText(html2);
+          if (stream2) return { stream: stream2, type: 'hls' };
+          
+          var unpacked = unpackPackerScripts(html2);
+          for (var i = 0; i < unpacked.length; i++) {
+            var s = findM3u8InText(unpacked[i]);
+            if (s) return { stream: s, type: 'hls' };
+          }
+          return { stream: iframe, type: 'iframe' };
+        }
+        
+        var unpackedScripts = unpackPackerScripts(html);
+        for (var j = 0; j < unpackedScripts.length; j++) {
+          var s2 = findM3u8InText(unpackedScripts[j]);
+          if (s2) return { stream: s2, type: 'hls' };
+        }
+        
+        return null;
+      } catch (e) {
+        console.error("[Api] Error resolving football source:", e);
+        return null;
+      }
+    });
   }
   function extractM3u8(embedUrl) {
     return __async(this, null, function* () {
@@ -511,18 +565,19 @@ var Api = (function() {
     };
   }
   return {
-    proxiedFetch,
-    fetchListing,
-    fetchTops,
-    fetchPlayer,
-    fetchEpisodes,
-    fetchTaxonomies,
-    fetchSearch,
-    extractEmbed,
-    extractPlayerSources,
-    extractM3u8,
-    enrichArtwork,
-    normalizeItem,
-    imgUrl
-  };
+      proxiedFetch,
+      fetchListing,
+      fetchTops,
+      fetchPlayer,
+      fetchEpisodes,
+      fetchTaxonomies,
+      fetchSearch,
+      extractEmbed,
+      extractPlayerSources,
+      extractM3u8,
+      enrichArtwork,
+      normalizeItem,
+      imgUrl,
+      resolveFootballSource
+    };
 })();
